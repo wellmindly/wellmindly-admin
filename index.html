@@ -13,7 +13,7 @@
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
     <!-- Chart.js CDN for Visual Analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" crossorigin src="./assets/index-CHd-k9ps.js"></script>
+    <script type="module" crossorigin src="./assets/index-B32bEdOI.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-CfmmpIu0.css">
   </head>
   <body>
@@ -61,6 +61,21 @@
           <button class="nav-item active" data-tab="overview">
             <i class="bx bxs-dashboard"></i>
             <span>Overview</span>
+          </button>
+          <button class="nav-item" data-tab="university">
+            <i class="bx bxs-school"></i>
+            <span>Universities</span>
+            <span class="badge-role" style="font-size: 8px; margin-left: auto; background: hsl(var(--border-glass)); color: hsl(var(--text-secondary));">SOON</span>
+          </button>
+          <button class="nav-item" data-tab="moderation">
+            <i class="bx bxs-message-rounded-dots"></i>
+            <span>TalkMindly Moderation</span>
+            <span class="badge-role" style="font-size: 8px; margin-left: auto; background: hsl(var(--border-glass)); color: hsl(var(--text-secondary));">SOON</span>
+          </button>
+          <button class="nav-item" data-tab="counselors">
+            <i class="bx bxs-user-voice"></i>
+            <span>Counsellors & Coaching</span>
+            <span class="badge-role" style="font-size: 8px; margin-left: auto; background: hsl(var(--border-glass)); color: hsl(var(--text-secondary));">SOON</span>
           </button>
           <button class="nav-item" data-tab="students">
             <i class="bx bxs-user-detail"></i>
@@ -343,8 +358,8 @@
                   <label for="filter-reach-first">Reach first?</label>
                   <select id="filter-reach-first">
                     <option value="">All Options</option>
-                    <option value="Write — on my own">Write — on my own</option>
-                    <option value="Talk — with others">Talk — with others</option>
+                    <option value="Write on my own">Write on my own</option>
+                    <option value="Talk with others">Talk with others</option>
                     <option value="Not sure">Not sure</option>
                   </select>
                 </div>
@@ -373,6 +388,42 @@
               <div class="table-pagination" id="feedback-pagination">
                 <!-- Pagination controls -->
               </div>
+            </div>
+          </div>
+
+          <!-- TAB: Universities (Coming Soon) -->
+          <div id="tab-university" class="tab-pane hidden">
+            <div class="glass-card flex-center flex-col" style="min-height: 350px; text-align: center; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <i class="bx bxs-school" style="font-size: 64px; margin-bottom: 20px; color: hsl(var(--primary-plum));"></i>
+              <h2 style="color: white; font-size: 24px; font-weight: 800; margin-bottom: 12px;">Universities Portal</h2>
+              <p class="text-secondary" style="max-width: 480px; margin-bottom: 24px; font-size: 14px; line-height: 1.6;">
+                Manage partner universities and institutions. Gulf International, Khalifa University, and Taylor's University dashboard configurations are coming soon.
+              </p>
+              <div class="badge-role" style="font-size: 11px; padding: 6px 14px; border-radius: 50px;">Under Active Development</div>
+            </div>
+          </div>
+
+          <!-- TAB: TalkMindly Moderation (Coming Soon) -->
+          <div id="tab-moderation" class="tab-pane hidden">
+            <div class="glass-card flex-center flex-col" style="min-height: 350px; text-align: center; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <i class="bx bxs-message-rounded-dots" style="font-size: 64px; margin-bottom: 20px; color: hsl(var(--primary-plum));"></i>
+              <h2 style="color: white; font-size: 24px; font-weight: 800; margin-bottom: 12px;">TalkMindly Moderation</h2>
+              <p class="text-secondary" style="max-width: 480px; margin-bottom: 24px; font-size: 14px; line-height: 1.6;">
+                Review flagged messages in anonymous peer-rooms, manage moderator schedules, and route critical alerts to safety queues.
+              </p>
+              <div class="badge-role" style="font-size: 11px; padding: 6px 14px; border-radius: 50px;">Coming Soon</div>
+            </div>
+          </div>
+
+          <!-- TAB: Counsellors & Coaching (Coming Soon) -->
+          <div id="tab-counselors" class="tab-pane hidden">
+            <div class="glass-card flex-center flex-col" style="min-height: 350px; text-align: center; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <i class="bx bxs-user-voice" style="font-size: 64px; margin-bottom: 20px; color: hsl(var(--primary-plum));"></i>
+              <h2 style="color: white; font-size: 24px; font-weight: 800; margin-bottom: 12px;">Counsellors & Coaches Roster</h2>
+              <p class="text-secondary" style="max-width: 480px; margin-bottom: 24px; font-size: 14px; line-height: 1.6;">
+                Oversee clinical vetting, active caseloads, and session bookings. Scoped access and consent management features are launching in the next release.
+              </p>
+              <div class="badge-role" style="font-size: 11px; padding: 6px 14px; border-radius: 50px;">Coming Soon</div>
             </div>
           </div>
 
