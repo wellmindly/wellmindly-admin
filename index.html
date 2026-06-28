@@ -61,6 +61,21 @@
             <i class="bx bxs-dashboard"></i>
             <span>Overview</span>
           </button>
+          <button class="nav-item" data-tab="university">
+            <i class="bx bxs-school"></i>
+            <span>Universities</span>
+            <span class="badge-role" style="font-size: 8px; margin-left: auto; background: hsl(var(--border-glass)); color: hsl(var(--text-secondary));">SOON</span>
+          </button>
+          <button class="nav-item" data-tab="moderation">
+            <i class="bx bxs-message-rounded-dots"></i>
+            <span>TalkMindly Moderation</span>
+            <span class="badge-role" style="font-size: 8px; margin-left: auto; background: hsl(var(--border-glass)); color: hsl(var(--text-secondary));">SOON</span>
+          </button>
+          <button class="nav-item" data-tab="counselors">
+            <i class="bx bxs-user-voice"></i>
+            <span>Counsellors & Coaching</span>
+            <span class="badge-role" style="font-size: 8px; margin-left: auto; background: hsl(var(--border-glass)); color: hsl(var(--text-secondary));">SOON</span>
+          </button>
           <button class="nav-item" data-tab="students">
             <i class="bx bxs-user-detail"></i>
             <span>Students</span>
@@ -142,7 +157,7 @@
                 <div class="kpi-data">
                   <h3>Critical Alerts</h3>
                   <p class="kpi-value text-critical" id="kpi-critical">-</p>
-                  <p class="kpi-meta text-secondary" style="font-size: 10px; line-height: 1.2; margin-top: 4px;">Severe PHQ-9 cases (score &gt; 15) flagged</p>
+                  <p class="kpi-meta text-secondary" style="font-size: 10px; line-height: 1.2; margin-top: 4px;">Severe concern cases flagged</p>
                 </div>
               </div>
             </div>
@@ -158,7 +173,7 @@
               </div>
               <div class="chart-container glass-card">
                 <h3>Clinical Severity Distribution</h3>
-                <p class="chart-subtitle">Breakdown of student classifications (PHQ-9 screening)</p>
+                <p class="chart-subtitle">Breakdown of student classifications (Wellbeing screenings)</p>
                 <div class="canvas-wrapper flex-center">
                   <canvas id="chart-severity"></canvas>
                 </div>
@@ -228,8 +243,8 @@
               <div class="quiz-detail-dashboard mt-16">
                 <div class="quiz-detail-meta glass-card">
                   <div class="meta-header">
-                    <h3 id="qd-title">PHQ-9</h3>
-                    <span class="quiz-category-badge" id="qd-category">Depression</span>
+                    <h3 id="qd-title">Assessments</h3>
+                    <span class="quiz-category-badge" id="qd-category">Wellbeing</span>
                   </div>
                   <p id="qd-description" class="text-secondary mt-8"></p>
                   
@@ -372,6 +387,42 @@
               <div class="table-pagination" id="feedback-pagination">
                 <!-- Pagination controls -->
               </div>
+            </div>
+          </div>
+
+          <!-- TAB: Universities (Coming Soon) -->
+          <div id="tab-university" class="tab-pane hidden">
+            <div class="glass-card flex-center flex-col" style="min-height: 350px; text-align: center; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <i class="bx bxs-school" style="font-size: 64px; margin-bottom: 20px; color: hsl(var(--primary-plum));"></i>
+              <h2 style="color: white; font-size: 24px; font-weight: 800; margin-bottom: 12px;">Universities Portal</h2>
+              <p class="text-secondary" style="max-width: 480px; margin-bottom: 24px; font-size: 14px; line-height: 1.6;">
+                Manage partner universities and institutions. Gulf International, Khalifa University, and Taylor's University dashboard configurations are coming soon.
+              </p>
+              <div class="badge-role" style="font-size: 11px; padding: 6px 14px; border-radius: 50px;">Under Active Development</div>
+            </div>
+          </div>
+
+          <!-- TAB: TalkMindly Moderation (Coming Soon) -->
+          <div id="tab-moderation" class="tab-pane hidden">
+            <div class="glass-card flex-center flex-col" style="min-height: 350px; text-align: center; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <i class="bx bxs-message-rounded-dots" style="font-size: 64px; margin-bottom: 20px; color: hsl(var(--primary-plum));"></i>
+              <h2 style="color: white; font-size: 24px; font-weight: 800; margin-bottom: 12px;">TalkMindly Moderation</h2>
+              <p class="text-secondary" style="max-width: 480px; margin-bottom: 24px; font-size: 14px; line-height: 1.6;">
+                Review flagged messages in anonymous peer-rooms, manage moderator schedules, and route critical alerts to safety queues.
+              </p>
+              <div class="badge-role" style="font-size: 11px; padding: 6px 14px; border-radius: 50px;">Coming Soon</div>
+            </div>
+          </div>
+
+          <!-- TAB: Counsellors & Coaching (Coming Soon) -->
+          <div id="tab-counselors" class="tab-pane hidden">
+            <div class="glass-card flex-center flex-col" style="min-height: 350px; text-align: center; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <i class="bx bxs-user-voice" style="font-size: 64px; margin-bottom: 20px; color: hsl(var(--primary-plum));"></i>
+              <h2 style="color: white; font-size: 24px; font-weight: 800; margin-bottom: 12px;">Counsellors & Coaches Roster</h2>
+              <p class="text-secondary" style="max-width: 480px; margin-bottom: 24px; font-size: 14px; line-height: 1.6;">
+                Oversee clinical vetting, active caseloads, and session bookings. Scoped access and consent management features are launching in the next release.
+              </p>
+              <div class="badge-role" style="font-size: 11px; padding: 6px 14px; border-radius: 50px;">Coming Soon</div>
             </div>
           </div>
 

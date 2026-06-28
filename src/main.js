@@ -266,6 +266,18 @@ function switchTab(tabName) {
       viewTitle.textContent = 'Dashboard Overview';
       viewSubtitle.textContent = 'Summary and trends across WellMindly students.';
       break;
+    case 'university':
+      viewTitle.textContent = 'Partner Universities';
+      viewSubtitle.textContent = 'Tenant management and institution configurations (Coming Soon).';
+      break;
+    case 'moderation':
+      viewTitle.textContent = 'TalkMindly Moderation';
+      viewSubtitle.textContent = 'Review anonymous peer chat flags and safety overrides (Coming Soon).';
+      break;
+    case 'counselors':
+      viewTitle.textContent = 'Counsellors & Coaches';
+      viewSubtitle.textContent = 'Clinical roster and active counsellor caseloads (Coming Soon).';
+      break;
     case 'students':
       viewTitle.textContent = 'Student Directory';
       viewSubtitle.textContent = 'Browse and review student profiles and check-in timelines.';
