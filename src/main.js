@@ -434,10 +434,10 @@ function renderOverviewCharts() {
   // Tailored cool colors for severity distribution
   const severityColors = severityLabels.map(label => {
     const l = label.toLowerCase();
-    if (l.includes('severe')) return 'hsl(352, 65%, 54%)'; // Soft Crimson Red
-    if (l.includes('moderate')) return 'hsl(35, 75%, 54%)'; // Amber
-    if (l.includes('mild')) return 'hsl(155, 55%, 46%)'; // Mint Green
-    if (l.includes('minimal') || l.includes('low') || l.includes('stress')) return 'hsl(185, 55%, 50%)'; // Soft Teal
+    if (l.includes('severe') || l.includes('distress') || l.includes('stretch') || l.includes('high')) return 'hsl(352, 65%, 54%)'; // Soft Crimson Red
+    if (l.includes('moderate') || l.includes('elevated') || l.includes('finding')) return 'hsl(35, 75%, 54%)'; // Amber
+    if (l.includes('mild') || l.includes('steady')) return 'hsl(155, 55%, 46%)'; // Mint Green
+    if (l.includes('minimal') || l.includes('low') || l.includes('doing well') || l.includes('excellent') || l.includes('positive') || l.includes('bright') || l.includes('stable')) return 'hsl(185, 55%, 50%)'; // Soft Teal
     return 'hsl(235, 50%, 65%)'; // Lavender
   });
 
@@ -633,24 +633,91 @@ function renderQuizzesList() {
     return;
   }
 
-  state.quizzes.forEach(quiz => {
-    const card = document.createElement('div');
-    card.className = 'quiz-card';
-    card.addEventListener('click', () => openQuizDetails(quiz.id));
+  const ACTIVE_QUIZ_TITLES = [
+    "Emotional check-in",
+    "Mood snapshot",
+    "Mental load",
+    "Headspace",
+    "Your circle",
+    "Running on empty",
+    "Signature strengths",
+    "Personality profile",
+    "What matters most",
+    "Strength & shadow",
+    "Your season"
+  ];
 
-    card.innerHTML = `
+  const activeQuizzes = state.quizzes.filter(q => ACTIVE_QUIZ_TITLES.includes(q.title));
+  const legacyQuizzes = state.quizzes.filter(q => !ACTIVE_QUIZ_TITLES.includes(q.title));
+
+  let htmlContent = '';
+
+  if (activeQuizzes.length > 0) {
+    htmlContent += `
+      <div style="grid-column: 1 / -1; margin-bottom: 8px;">
+        <h3 style="color: white; font-size: 16px; font-weight: 700; margin-bottom: 4px;">Active Self-Discovery Blueprints</h3>
+        <p class="text-secondary" style="font-size: 12.5px; margin-bottom: 12px;">Current client-approved non-clinical assessments.</p>
+      </div>
+    `;
+    activeQuizzes.forEach(quiz => {
+      htmlContent += createQuizCardHtml(quiz);
+    });
+  }
+
+  if (legacyQuizzes.length > 0) {
+    htmlContent += `
+      <div style="grid-column: 1 / -1; margin-top: 24px; margin-bottom: 8px;">
+        <h3 style="color: white; font-size: 16px; font-weight: 700; margin-bottom: 4px;">Legacy & Clinical Assessments</h3>
+        <p class="text-secondary" style="font-size: 12.5px; margin-bottom: 12px;">Archived or clinical diagnostic tests (e.g. PHQ-9) from previous database states.</p>
+      </div>
+    `;
+    legacyQuizzes.forEach(quiz => {
+      htmlContent += createQuizCardHtml(quiz);
+    });
+  }
+
+  listEl.innerHTML = htmlContent;
+
+  // Add click handlers dynamically since we generated html strings
+  state.quizzes.forEach(quiz => {
+    const cardEl = document.getElementById(`quiz-card-${quiz.id}`);
+    if (cardEl) {
+      cardEl.addEventListener('click', () => openQuizDetails(quiz.id));
+    }
+  });
+}
+
+function createQuizCardHtml(quiz) {
+  const isLegacy = ![
+    "Emotional check-in",
+    "Mood snapshot",
+    "Mental load",
+    "Headspace",
+    "Your circle",
+    "Running on empty",
+    "Signature strengths",
+    "Personality profile",
+    "What matters most",
+    "Strength & shadow",
+    "Your season"
+  ].includes(quiz.title);
+
+  const borderClass = isLegacy ? 'style="border-color: rgba(255,255,255,0.06); opacity: 0.8;"' : '';
+  const badgeStyle = isLegacy ? 'style="background-color: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6);"' : '';
+
+  return `
+    <div class="quiz-card" id="quiz-card-${quiz.id}" ${borderClass}>
       <div class="quiz-card-header">
         <h3>${quiz.title}</h3>
-        <span class="quiz-category-badge">${quiz.category}</span>
+        <span class="quiz-category-badge" ${badgeStyle}>${quiz.category}</span>
       </div>
       <p class="description">${quiz.description || 'Self-reflection interactive test.'}</p>
       <div class="quiz-card-footer">
         <div class="quiz-meta-item">Questions blueprint: <span>${quiz.questions?.length || 0}</span></div>
         <div class="quiz-meta-item">Max Score: <span>${quiz.maxScore}</span></div>
       </div>
-    `;
-    listEl.appendChild(card);
-  });
+    </div>
+  `;
 }
 
 // ── DRILLDOWN: INTERACTIVE QUIZ DETAILS VIEW ──────────────────────────
