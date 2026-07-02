@@ -63,17 +63,19 @@
           </button>
           <button class="nav-item" data-tab="university">
             <i class="bx bxs-school"></i>
-            <span>Universities</span>
-            <span class="badge-role" style="font-size: 8px; margin-left: auto; background: hsl(var(--border-glass)); color: hsl(var(--text-secondary));">SOON</span>
+            <span>University Requests</span>
+          </button>
+          <button class="nav-item" data-tab="counselors">
+            <i class="bx bxs-user-voice"></i>
+            <span>Counselor Apps</span>
+          </button>
+          <button class="nav-item" data-tab="contacts">
+            <i class="bx bxs-contact"></i>
+            <span>General Contacts</span>
           </button>
           <button class="nav-item" data-tab="moderation">
             <i class="bx bxs-message-rounded-dots"></i>
             <span>TalkMindly Moderation</span>
-            <span class="badge-role" style="font-size: 8px; margin-left: auto; background: hsl(var(--border-glass)); color: hsl(var(--text-secondary));">SOON</span>
-          </button>
-          <button class="nav-item" data-tab="counselors">
-            <i class="bx bxs-user-voice"></i>
-            <span>Counsellors & Coaching</span>
             <span class="badge-role" style="font-size: 8px; margin-left: auto; background: hsl(var(--border-glass)); color: hsl(var(--text-secondary));">SOON</span>
           </button>
           <button class="nav-item" data-tab="students">
@@ -390,15 +392,35 @@
             </div>
           </div>
 
-          <!-- TAB: Universities (Coming Soon) -->
+          <!-- TAB: Universities (Onboarding Requests) -->
           <div id="tab-university" class="tab-pane hidden">
-            <div class="glass-card flex-center flex-col" style="min-height: 350px; text-align: center; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-              <i class="bx bxs-school" style="font-size: 64px; margin-bottom: 20px; color: hsl(var(--primary-plum));"></i>
-              <h2 style="color: white; font-size: 24px; font-weight: 800; margin-bottom: 12px;">Universities Portal</h2>
-              <p class="text-secondary" style="max-width: 480px; margin-bottom: 24px; font-size: 14px; line-height: 1.6;">
-                Manage partner universities and institutions. Gulf International, Khalifa University, and Taylor's University dashboard configurations are coming soon.
-              </p>
-              <div class="badge-role" style="font-size: 11px; padding: 6px 14px; border-radius: 50px;">Under Active Development</div>
+            <div class="filter-bar glass-card">
+              <div class="search-box">
+                <i class="bx bx-search"></i>
+                <input type="text" id="search-university-contact" placeholder="Search requests by school, name, or role..." />
+              </div>
+            </div>
+
+            <div class="table-container glass-card">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>University / College</th>
+                    <th>Contact Person</th>
+                    <th>Role / Title</th>
+                    <th>Email Address</th>
+                    <th>Phone</th>
+                    <th>Date Received</th>
+                    <th class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="university-contact-list">
+                  <!-- Dynamic rows go here -->
+                </tbody>
+              </table>
+              <div class="table-pagination" id="university-contact-pagination">
+                <!-- Pagination buttons -->
+              </div>
             </div>
           </div>
 
@@ -414,15 +436,64 @@
             </div>
           </div>
 
-          <!-- TAB: Counsellors & Coaching (Coming Soon) -->
+          <!-- TAB: Counsellors & Coaching (Onboarding Applications) -->
           <div id="tab-counselors" class="tab-pane hidden">
-            <div class="glass-card flex-center flex-col" style="min-height: 350px; text-align: center; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-              <i class="bx bxs-user-voice" style="font-size: 64px; margin-bottom: 20px; color: hsl(var(--primary-plum));"></i>
-              <h2 style="color: white; font-size: 24px; font-weight: 800; margin-bottom: 12px;">Counsellors & Coaches Roster</h2>
-              <p class="text-secondary" style="max-width: 480px; margin-bottom: 24px; font-size: 14px; line-height: 1.6;">
-                Oversee clinical vetting, active caseloads, and session bookings. Scoped access and consent management features are launching in the next release.
-              </p>
-              <div class="badge-role" style="font-size: 11px; padding: 6px 14px; border-radius: 50px;">Coming Soon</div>
+            <div class="filter-bar glass-card">
+              <div class="search-box">
+                <i class="bx bx-search"></i>
+                <input type="text" id="search-counselor-contact" placeholder="Search applicants by name, email, or credentials..." />
+              </div>
+            </div>
+
+            <div class="table-container glass-card">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Counselor Name</th>
+                    <th>Email Address</th>
+                    <th>Phone</th>
+                    <th>Credentials & Licenses</th>
+                    <th>Date Applied</th>
+                    <th class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="counselor-contact-list">
+                  <!-- Dynamic rows go here -->
+                </tbody>
+              </table>
+              <div class="table-pagination" id="counselor-contact-pagination">
+                <!-- Pagination buttons -->
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB: General Contacts -->
+          <div id="tab-contacts" class="tab-pane hidden">
+            <div class="filter-bar glass-card">
+              <div class="search-box">
+                <i class="bx bx-search"></i>
+                <input type="text" id="search-general-contact" placeholder="Search inquiries by name, email, or subject..." />
+              </div>
+            </div>
+
+            <div class="table-container glass-card">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email Address</th>
+                    <th>Subject</th>
+                    <th>Date Received</th>
+                    <th class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="general-contact-list">
+                  <!-- Dynamic rows go here -->
+                </tbody>
+              </table>
+              <div class="table-pagination" id="general-contact-pagination">
+                <!-- Pagination buttons -->
+              </div>
             </div>
           </div>
 
@@ -574,6 +645,24 @@
         <div class="modal-body scrollable">
           <div class="survey-results-box" id="survey-answers-container">
             <!-- Questions and answers will be rendered here dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Reusable Onboarding/Contact Inquiry Detail Card -->
+    <div id="modal-inquiry" class="modal-wrapper hidden">
+      <div class="modal-card width-lg">
+        <div class="modal-header">
+          <div>
+            <h2 id="inquiry-modal-title">Inquiry Details</h2>
+            <p id="inquiry-modal-subtitle" class="text-secondary"></p>
+          </div>
+          <button class="btn-close-modal" onclick="closeInquiryModal()"><i class="bx bx-x"></i></button>
+        </div>
+        <div class="modal-body scrollable" style="padding: 24px;">
+          <div id="inquiry-details-container" style="display: flex; flex-direction: column; gap: 16px;">
+            <!-- Rendered dynamically in main.js -->
           </div>
         </div>
       </div>

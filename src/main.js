@@ -11,6 +11,12 @@ const state = {
   quizzes: [],
   feedbacks: [],
   metrics: null,
+
+  // New Inquiry States
+  universityContacts: [],
+  counselorContacts: [],
+  generalContacts: [],
+  activeInquiry: null,
   
   // Drill-down contexts
   activeQuizId: null, // Selected quiz ID in Quizzes tab
@@ -30,14 +36,20 @@ const pagState = {
   students: { page: 1, pageSize: 6 },
   feedbacks: { page: 1, pageSize: 5 },
   qdSubmissions: { page: 1, pageSize: 5 },
-  studentHistory: { page: 1, pageSize: 4 }
+  studentHistory: { page: 1, pageSize: 4 },
+  universityContacts: { page: 1, pageSize: 5 },
+  counselorContacts: { page: 1, pageSize: 5 },
+  generalContacts: { page: 1, pageSize: 5 }
 };
 
 const searchState = {
   students: '',
   feedbacks: '',
   qdSubmissions: '',
-  studentHistory: ''
+  studentHistory: '',
+  universityContacts: '',
+  counselorContacts: '',
+  generalContacts: ''
 };
 
 const filterState = {
@@ -154,12 +166,43 @@ function setupEventHandlers() {
     });
   }
 
+  // Search input: University Onboarding Requests
+  const searchUniContact = document.getElementById('search-university-contact');
+  if (searchUniContact) {
+    searchUniContact.addEventListener('input', (e) => {
+      searchState.universityContacts = e.target.value;
+      pagState.universityContacts.page = 1;
+      renderUniversityContacts();
+    });
+  }
+
+  // Search input: Counselor Onboarding Requests
+  const searchCounsContact = document.getElementById('search-counselor-contact');
+  if (searchCounsContact) {
+    searchCounsContact.addEventListener('input', (e) => {
+      searchState.counselorContacts = e.target.value;
+      pagState.counselorContacts.page = 1;
+      renderCounselorContacts();
+    });
+  }
+
+  // Search input: General Contacts
+  const searchGenContact = document.getElementById('search-general-contact');
+  if (searchGenContact) {
+    searchGenContact.addEventListener('input', (e) => {
+      searchState.generalContacts = e.target.value;
+      pagState.generalContacts.page = 1;
+      renderGeneralContacts();
+    });
+  }
+
   // Escape key closes modals
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeStudentModal();
       closeAssessmentModal();
       closeSurveyModal();
+      closeInquiryModal();
     }
   });
 
@@ -172,6 +215,10 @@ function setupEventHandlers() {
   window.closeSurveyModal = closeSurveyModal;
   window.openSurveyModal = openSurveyModal;
   window.openQuizDetails = openQuizDetails;
+
+  window.openInquiryDetails = openInquiryDetails;
+  window.closeInquiryModal = closeInquiryModal;
+  window.deleteInquiry = deleteInquiry;
 }
 
 // Authentication Check
@@ -267,16 +314,23 @@ function switchTab(tabName) {
       viewSubtitle.textContent = 'Summary and trends across WellMindly students.';
       break;
     case 'university':
-      viewTitle.textContent = 'Partner Universities';
-      viewSubtitle.textContent = 'Tenant management and institution configurations (Coming Soon).';
+      viewTitle.textContent = 'University Onboarding Requests';
+      viewSubtitle.textContent = 'Review and manage collaboration requests from university administrations.';
+      fetchUniversityContacts();
       break;
     case 'moderation':
       viewTitle.textContent = 'TalkMindly Moderation';
       viewSubtitle.textContent = 'Review anonymous peer chat flags and safety overrides (Coming Soon).';
       break;
     case 'counselors':
-      viewTitle.textContent = 'Counsellors & Coaches';
-      viewSubtitle.textContent = 'Clinical roster and active counsellor caseloads (Coming Soon).';
+      viewTitle.textContent = 'Counselor Applications';
+      viewSubtitle.textContent = 'Review therapist and student coach onboarding applications.';
+      fetchCounselorContacts();
+      break;
+    case 'contacts':
+      viewTitle.textContent = 'General Contacts';
+      viewSubtitle.textContent = 'Review and manage general student and visitor support contact inquiries.';
+      fetchGeneralContacts();
       break;
     case 'students':
       viewTitle.textContent = 'Student Directory';
@@ -1567,6 +1621,330 @@ async function openAssessmentSheet(resultId) {
 function closeAssessmentModal() {
   const modal = document.getElementById('modal-assessment');
   if (modal) modal.classList.add('hidden');
+}
+
+// --- INQUIRIES MANAGEMENT (FETCH & RENDER) ---
+
+async function fetchUniversityContacts() {
+  const data = await apiFetch(`/contacts/university?page=${pagState.universityContacts.page}&limit=${pagState.universityContacts.pageSize}`);
+  if (data && data.requests) {
+    state.universityContacts = data.requests;
+    renderUniversityContacts(data.total);
+  }
+}
+
+function renderUniversityContacts(totalCount = state.universityContacts.length) {
+  const listEl = document.getElementById('university-contact-list');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+
+  const q = searchState.universityContacts.toLowerCase().trim();
+  const filtered = state.universityContacts.filter(item => {
+    if (!q) return true;
+    return (item.universityName || '').toLowerCase().includes(q) ||
+           (item.name || '').toLowerCase().includes(q) ||
+           (item.role || '').toLowerCase().includes(q) ||
+           (item.email || '').toLowerCase().includes(q);
+  });
+
+  const total = q ? filtered.length : totalCount;
+  const config = pagState.universityContacts;
+  const totalPages = Math.ceil(total / config.pageSize) || 1;
+
+  const displayItems = q ? filtered.slice((config.page - 1) * config.pageSize, config.page * config.pageSize) : filtered;
+
+  if (displayItems.length === 0) {
+    listEl.innerHTML = `<tr><td colspan="7" class="text-secondary" style="text-align:center; padding:32px;">No university requests found.</td></tr>`;
+    renderPaginationControls('university-contact-pagination', config.page, totalPages, page => {
+      pagState.universityContacts.page = page;
+      fetchUniversityContacts();
+    });
+    return;
+  }
+
+  displayItems.forEach(item => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td><strong style="color:white;">${item.universityName}</strong></td>
+      <td><span>${item.name}</span></td>
+      <td><span class="badge-role">${item.role}</span></td>
+      <td><span class="text-secondary">${item.email}</span></td>
+      <td><span class="text-secondary">${item.phone || 'N/A'}</span></td>
+      <td><span>${formatDateString(item.createdAt)}</span></td>
+      <td class="text-right">
+        <button class="btn-view-details" onclick="openInquiryDetails('university', '${item.id}')" style="margin-right: 6px;">
+          <i class="bx bx-show"></i> View
+        </button>
+        <button class="btn-view-details" onclick="deleteInquiry('university', '${item.id}')" style="background: rgba(220, 38, 38, 0.2); border-color: rgba(220, 38, 38, 0.4); color: #ef4444;">
+          <i class="bx bx-trash"></i>
+        </button>
+      </td>
+    `;
+    listEl.appendChild(row);
+  });
+
+  renderPaginationControls('university-contact-pagination', config.page, totalPages, page => {
+    pagState.universityContacts.page = page;
+    fetchUniversityContacts();
+  });
+}
+
+async function fetchCounselorContacts() {
+  const data = await apiFetch(`/contacts/counselor?page=${pagState.counselorContacts.page}&limit=${pagState.counselorContacts.pageSize}`);
+  if (data && data.requests) {
+    state.counselorContacts = data.requests;
+    renderCounselorContacts(data.total);
+  }
+}
+
+function renderCounselorContacts(totalCount = state.counselorContacts.length) {
+  const listEl = document.getElementById('counselor-contact-list');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+
+  const q = searchState.counselorContacts.toLowerCase().trim();
+  const filtered = state.counselorContacts.filter(item => {
+    if (!q) return true;
+    return (item.name || '').toLowerCase().includes(q) ||
+           (item.email || '').toLowerCase().includes(q) ||
+           (item.credentials || '').toLowerCase().includes(q);
+  });
+
+  const total = q ? filtered.length : totalCount;
+  const config = pagState.counselorContacts;
+  const totalPages = Math.ceil(total / config.pageSize) || 1;
+
+  const displayItems = q ? filtered.slice((config.page - 1) * config.pageSize, config.page * config.pageSize) : filtered;
+
+  if (displayItems.length === 0) {
+    listEl.innerHTML = `<tr><td colspan="6" class="text-secondary" style="text-align:center; padding:32px;">No counselor applications found.</td></tr>`;
+    renderPaginationControls('counselor-contact-pagination', config.page, totalPages, page => {
+      pagState.counselorContacts.page = page;
+      fetchCounselorContacts();
+    });
+    return;
+  }
+
+  displayItems.forEach(item => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td><strong style="color:white;">${item.name}</strong></td>
+      <td><span class="text-secondary">${item.email}</span></td>
+      <td><span class="text-secondary">${item.phone || 'N/A'}</span></td>
+      <td><span class="badge-role">${item.credentials}</span></td>
+      <td><span>${formatDateString(item.createdAt)}</span></td>
+      <td class="text-right">
+        <button class="btn-view-details" onclick="openInquiryDetails('counselor', '${item.id}')" style="margin-right: 6px;">
+          <i class="bx bx-show"></i> View
+        </button>
+        <button class="btn-view-details" onclick="deleteInquiry('counselor', '${item.id}')" style="background: rgba(220, 38, 38, 0.2); border-color: rgba(220, 38, 38, 0.4); color: #ef4444;">
+          <i class="bx bx-trash"></i>
+        </button>
+      </td>
+    `;
+    listEl.appendChild(row);
+  });
+
+  renderPaginationControls('counselor-contact-pagination', config.page, totalPages, page => {
+    pagState.counselorContacts.page = page;
+    fetchCounselorContacts();
+  });
+}
+
+async function fetchGeneralContacts() {
+  const data = await apiFetch(`/contacts/general?page=${pagState.generalContacts.page}&limit=${pagState.generalContacts.pageSize}`);
+  if (data && data.contacts) {
+    state.generalContacts = data.contacts;
+    renderGeneralContacts(data.total);
+  }
+}
+
+function renderGeneralContacts(totalCount = state.generalContacts.length) {
+  const listEl = document.getElementById('general-contact-list');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+
+  const q = searchState.generalContacts.toLowerCase().trim();
+  const filtered = state.generalContacts.filter(item => {
+    if (!q) return true;
+    return (item.name || '').toLowerCase().includes(q) ||
+           (item.email || '').toLowerCase().includes(q) ||
+           (item.subject || '').toLowerCase().includes(q) ||
+           (item.message || '').toLowerCase().includes(q);
+  });
+
+  const total = q ? filtered.length : totalCount;
+  const config = pagState.generalContacts;
+  const totalPages = Math.ceil(total / config.pageSize) || 1;
+
+  const displayItems = q ? filtered.slice((config.page - 1) * config.pageSize, config.page * config.pageSize) : filtered;
+
+  if (displayItems.length === 0) {
+    listEl.innerHTML = `<tr><td colspan="5" class="text-secondary" style="text-align:center; padding:32px;">No contact inquiries found.</td></tr>`;
+    renderPaginationControls('general-contact-pagination', config.page, totalPages, page => {
+      pagState.generalContacts.page = page;
+      fetchGeneralContacts();
+    });
+    return;
+  }
+
+  displayItems.forEach(item => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td><strong style="color:white;">${item.name}</strong></td>
+      <td><span class="text-secondary">${item.email}</span></td>
+      <td><span class="badge-role">${item.subject || 'General Inquiry'}</span></td>
+      <td><span>${formatDateString(item.createdAt)}</span></td>
+      <td class="text-right">
+        <button class="btn-view-details" onclick="openInquiryDetails('general', '${item.id}')" style="margin-right: 6px;">
+          <i class="bx bx-show"></i> View
+        </button>
+        <button class="btn-view-details" onclick="deleteInquiry('general', '${item.id}')" style="background: rgba(220, 38, 38, 0.2); border-color: rgba(220, 38, 38, 0.4); color: #ef4444;">
+          <i class="bx bx-trash"></i>
+        </button>
+      </td>
+    `;
+    listEl.appendChild(row);
+  });
+
+  renderPaginationControls('general-contact-pagination', config.page, totalPages, page => {
+    pagState.generalContacts.page = page;
+    fetchGeneralContacts();
+  });
+}
+
+function openInquiryDetails(type, id) {
+  let item = null;
+  let title = '';
+  let subtitle = '';
+  let fields = [];
+
+  if (type === 'university') {
+    item = state.universityContacts.find(u => u.id === id);
+    title = 'University Onboarding Inquiry';
+    subtitle = `From ${item?.universityName || 'Campus'}`;
+    fields = [
+      { label: 'Campus / College Name', value: item?.universityName },
+      { label: 'Contact Person Name', value: item?.name },
+      { label: 'Staff Role / Title', value: item?.role },
+      { label: 'Official Email', value: item?.email },
+      { label: 'Phone Number', value: item?.phone || 'Not provided' },
+      { label: 'Inquiry Message', value: item?.message, isTextarea: true },
+      { label: 'Received At', value: formatDateString(item?.createdAt) + ' ' + new Date(item?.createdAt).toLocaleTimeString() }
+    ];
+  } else if (type === 'counselor') {
+    item = state.counselorContacts.find(c => c.id === id);
+    title = 'Counselor Application Details';
+    subtitle = `From ${item?.name || 'Applicant'}`;
+    fields = [
+      { label: 'Applicant Full Name', value: item?.name },
+      { label: 'Email Address', value: item?.email },
+      { label: 'Phone Number', value: item?.phone || 'Not provided' },
+      { label: 'Vetted Credentials & Licenses', value: item?.credentials },
+      { label: 'Professional Experience Summary', value: item?.experience, isTextarea: true },
+      { label: 'Cover Note / Message', value: item?.message, isTextarea: true },
+      { label: 'Received At', value: formatDateString(item?.createdAt) + ' ' + new Date(item?.createdAt).toLocaleTimeString() }
+    ];
+  } else if (type === 'general') {
+    item = state.generalContacts.find(g => g.id === id);
+    title = 'General Contact Inquiry';
+    subtitle = `From ${item?.name || 'Visitor'}`;
+    fields = [
+      { label: 'Sender Name', value: item?.name },
+      { label: 'Sender Email Address', value: item?.email },
+      { label: 'Subject Category', value: item?.subject || 'General Assistance' },
+      { label: 'Message Details', value: item?.message, isTextarea: true },
+      { label: 'Received At', value: formatDateString(item?.createdAt) + ' ' + new Date(item?.createdAt).toLocaleTimeString() }
+    ];
+  }
+
+  if (!item) return;
+
+  document.getElementById('inquiry-modal-title').textContent = title;
+  document.getElementById('inquiry-modal-subtitle').textContent = subtitle;
+
+  const container = document.getElementById('inquiry-details-container');
+  container.innerHTML = '';
+
+  fields.forEach(f => {
+    const group = document.createElement('div');
+    group.style.display = 'flex';
+    group.style.flexDirection = 'column';
+    group.style.gap = '6px';
+    group.style.borderBottom = '1px solid rgba(255, 255, 255, 0.05)';
+    group.style.paddingBottom = '12px';
+
+    const labelSpan = document.createElement('span');
+    labelSpan.style.fontSize = '11px';
+    labelSpan.style.color = 'rgba(255, 255, 255, 0.4)';
+    labelSpan.style.textTransform = 'uppercase';
+    labelSpan.style.letterSpacing = '0.05em';
+    labelSpan.style.fontWeight = 'bold';
+    labelSpan.textContent = f.label;
+
+    let contentEl;
+    if (f.isTextarea) {
+      contentEl = document.createElement('div');
+      contentEl.style.fontSize = '13.5px';
+      contentEl.style.color = '#e2e8f0';
+      contentEl.style.lineHeight = '1.6';
+      contentEl.style.background = 'rgba(0, 0, 0, 0.2)';
+      contentEl.style.padding = '12px';
+      contentEl.style.borderRadius = '8px';
+      contentEl.style.whiteSpace = 'pre-wrap';
+      contentEl.textContent = f.value || 'N/A';
+    } else {
+      contentEl = document.createElement('span');
+      contentEl.style.fontSize = '14px';
+      contentEl.style.color = '#ffffff';
+      contentEl.style.fontWeight = '500';
+      contentEl.textContent = f.value || 'N/A';
+    }
+
+    group.appendChild(labelSpan);
+    group.appendChild(contentEl);
+    container.appendChild(group);
+  });
+
+  document.getElementById('modal-inquiry').classList.remove('hidden');
+}
+
+function closeInquiryModal() {
+  const modal = document.getElementById('modal-inquiry');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function deleteInquiry(type, id) {
+  if (!confirm(`Are you sure you want to permanently delete this ${type} inquiry record?`)) return;
+
+  try {
+    const response = await fetch(`${BASE_URL}/contacts/${type}/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${state.token}`
+      }
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Failed to delete record.');
+    }
+
+    alert('Record deleted successfully.');
+    closeInquiryModal();
+
+    // Reload tab data
+    if (type === 'university') {
+      await fetchUniversityContacts();
+    } else if (type === 'counselor') {
+      await fetchCounselorContacts();
+    } else if (type === 'general') {
+      await fetchGeneralContacts();
+    }
+  } catch (error) {
+    console.error('Delete inquiry failed:', error);
+    alert(error.message || 'Failed to delete inquiry');
+  }
 }
 
 // Utility: Format Date
