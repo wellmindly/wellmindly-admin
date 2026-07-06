@@ -76,7 +76,6 @@
           <button class="nav-item" data-tab="moderation">
             <i class="bx bxs-message-rounded-dots"></i>
             <span>TalkMindly Moderation</span>
-            <span class="badge-role" style="font-size: 8px; margin-left: auto; background: hsl(var(--border-glass)); color: hsl(var(--text-secondary));">SOON</span>
           </button>
           <button class="nav-item" data-tab="students">
             <i class="bx bxs-user-detail"></i>
@@ -424,18 +423,6 @@
             </div>
           </div>
 
-          <!-- TAB: TalkMindly Moderation (Coming Soon) -->
-          <div id="tab-moderation" class="tab-pane hidden">
-            <div class="glass-card flex-center flex-col" style="min-height: 350px; text-align: center; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-              <i class="bx bxs-message-rounded-dots" style="font-size: 64px; margin-bottom: 20px; color: hsl(var(--primary-plum));"></i>
-              <h2 style="color: white; font-size: 24px; font-weight: 800; margin-bottom: 12px;">TalkMindly Moderation</h2>
-              <p class="text-secondary" style="max-width: 480px; margin-bottom: 24px; font-size: 14px; line-height: 1.6;">
-                Review flagged messages in anonymous peer-rooms, manage moderator schedules, and route critical alerts to safety queues.
-              </p>
-              <div class="badge-role" style="font-size: 11px; padding: 6px 14px; border-radius: 50px;">Coming Soon</div>
-            </div>
-          </div>
-
           <!-- TAB: Counsellors & Coaching (Onboarding Applications) -->
           <div id="tab-counselors" class="tab-pane hidden">
             <div class="filter-bar glass-card">
@@ -494,6 +481,105 @@
               <div class="table-pagination" id="general-contact-pagination">
                 <!-- Pagination buttons -->
               </div>
+            </div>
+          </div>
+
+          <!-- TAB: TalkMindly Moderation -->
+          <div id="tab-moderation" class="tab-pane hidden">
+            <!-- KPI Summary Cards -->
+            <div class="kpi-grid" style="margin-bottom: 20px;">
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-blue"><i class="bx bx-dollar-circle"></i></div>
+                <div class="kpi-data">
+                  <h3>AI API Cost</h3>
+                  <p class="kpi-value" id="kpi-talk-cost">$0.00</p>
+                  <p class="kpi-meta text-secondary">Gemini 2.5 Flash tokens</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-plum"><i class="bx bx-message-rounded-dots"></i></div>
+                <div class="kpi-data">
+                  <h3>Total Messages</h3>
+                  <p class="kpi-value" id="kpi-talk-messages">0</p>
+                  <p class="kpi-meta text-secondary">Notes & replies posted</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card border-critical">
+                <div class="kpi-icon icon-critical"><i class="bx bx-error-alt"></i></div>
+                <div class="kpi-data">
+                  <h3>Flagged Items</h3>
+                  <p class="kpi-value text-critical" id="kpi-talk-flagged">0</p>
+                  <p class="kpi-meta text-critical">Muted/Pending moderation</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-green"><i class="bx bx-door-open"></i></div>
+                <div class="kpi-data">
+                  <h3>TalkRooms</h3>
+                  <p class="kpi-value" id="kpi-talk-rooms">0</p>
+                  <p class="kpi-meta text-secondary">Active support channels</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Two Column Layout: Rooms Management & Flagged Queue -->
+            <div style="display: grid; grid-template-columns: 350px 1fr; gap: 20px; align-items: start;">
+              
+              <!-- Column Left: Rooms Manager -->
+              <div class="section-card glass-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                  <h3 style="margin: 0;">TalkRooms</h3>
+                  <button class="btn-primary small" id="btn-open-create-room" style="font-size: 11px; padding: 6px 12px; height: auto;">+ New Room</button>
+                </div>
+
+                <!-- Create Room Form (Hidden by default) -->
+                <div id="create-room-form-container" class="hidden" style="margin-bottom: 16px; padding: 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; background: rgba(255,255,255,0.02);">
+                  <h4 style="margin: 0 0 10px 0; font-size: 12px;">Create TalkRoom</h4>
+                  <div class="form-group" style="margin-bottom: 8px;">
+                    <input type="text" id="new-room-name" placeholder="Room Name (e.g., Study Stress)" style="font-size: 11px; padding: 8px; width: 100%;" />
+                  </div>
+                  <div class="form-group" style="margin-bottom: 12px;">
+                    <textarea id="new-room-desc" placeholder="Brief description..." style="font-size: 11px; padding: 8px; width: 100%; min-height: 50px; resize: none;"></textarea>
+                  </div>
+                  <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                    <button class="btn-secondary small" id="btn-cancel-create-room" style="font-size: 10px; padding: 4px 8px;">Cancel</button>
+                    <button class="btn-primary small" id="btn-submit-create-room" style="font-size: 10px; padding: 4px 8px;">Create</button>
+                  </div>
+                </div>
+
+                <div class="rooms-list-container" id="admin-rooms-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; padding-right: 4px;">
+                  <!-- Rooms list rendered dynamically -->
+                </div>
+              </div>
+
+              <!-- Column Right: Flagged Moderation Queue -->
+              <div class="section-card glass-card">
+                <h3>Flagged Content Queue</h3>
+                <p class="section-subtitle">Notes and replies muted or pending review</p>
+
+                <div class="table-container mt-16">
+                  <table class="data-table small">
+                    <thead>
+                      <tr>
+                        <th style="width: 80px;">Type</th>
+                        <th>Room/Note</th>
+                        <th>User (Nick)</th>
+                        <th>Content</th>
+                        <th>AI Moderation Reason</th>
+                        <th class="text-right" style="width: 140px;">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="flagged-content-list">
+                      <!-- Flagged items go here -->
+                    </tbody>
+                  </table>
+                  <div id="flagged-empty-state" class="text-center py-20 text-secondary hidden" style="padding: 40px 0; color: rgba(255,255,255,0.4);">
+                    <i class="bx bx-check-circle" style="font-size: 32px; color: #10b981; margin-bottom: 8px; display: block;"></i>
+                    <span style="font-size: 12px; font-weight: 600;">Queue Clean! No flagged items found.</span>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
 

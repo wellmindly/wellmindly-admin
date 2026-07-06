@@ -219,6 +219,58 @@ function setupEventHandlers() {
   window.openInquiryDetails = openInquiryDetails;
   window.closeInquiryModal = closeInquiryModal;
   window.deleteInquiry = deleteInquiry;
+
+  // TalkRooms Creation Toggle Form & Submit Handling
+  const btnOpenCreateRoom = document.getElementById('btn-open-create-room');
+  const btnCancelCreateRoom = document.getElementById('btn-cancel-create-room');
+  const createRoomFormContainer = document.getElementById('create-room-form-container');
+
+  if (btnOpenCreateRoom && createRoomFormContainer) {
+    btnOpenCreateRoom.addEventListener('click', () => {
+      createRoomFormContainer.classList.remove('hidden');
+      btnOpenCreateRoom.classList.add('hidden');
+    });
+  }
+
+  if (btnCancelCreateRoom && createRoomFormContainer && btnOpenCreateRoom) {
+    btnCancelCreateRoom.addEventListener('click', () => {
+      createRoomFormContainer.classList.add('hidden');
+      btnOpenCreateRoom.classList.remove('hidden');
+      const nameInput = document.getElementById('new-room-name');
+      const descInput = document.getElementById('new-room-desc');
+      if (nameInput) nameInput.value = '';
+      if (descInput) descInput.value = '';
+    });
+  }
+
+  const btnSubmitCreateRoom = document.getElementById('btn-submit-create-room');
+  if (btnSubmitCreateRoom) {
+    btnSubmitCreateRoom.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const nameInput = document.getElementById('new-room-name');
+      const descInput = document.getElementById('new-room-desc');
+      if (!nameInput) return;
+      
+      const name = nameInput.value.trim();
+      const description = descInput ? descInput.value.trim() : '';
+
+      if (!name) {
+        alert('Room name is required.');
+        return;
+      }
+
+      const res = await apiPost('/talk/rooms', { name, description });
+      if (res) {
+        nameInput.value = '';
+        if (descInput) descInput.value = '';
+        if (createRoomFormContainer && btnOpenCreateRoom) {
+          createRoomFormContainer.classList.add('hidden');
+          btnOpenCreateRoom.classList.remove('hidden');
+        }
+        fetchTalkModerationData();
+      }
+    });
+  }
 }
 
 // Authentication Check
@@ -320,7 +372,8 @@ function switchTab(tabName) {
       break;
     case 'moderation':
       viewTitle.textContent = 'TalkMindly Moderation';
-      viewSubtitle.textContent = 'Review anonymous peer chat flags and safety overrides (Coming Soon).';
+      viewSubtitle.textContent = 'Review anonymous peer chat flags, track AI costs, and manage TalkRooms.';
+      fetchTalkModerationData();
       break;
     case 'counselors':
       viewTitle.textContent = 'Counselor Applications';
@@ -1948,6 +2001,7 @@ async function deleteInquiry(type, id) {
 }
 
 // Utility: Format Date
+// Utility: Format Date
 function formatDateString(dateStr) {
   if (!dateStr) return 'N/A';
   const date = new Date(dateStr);
@@ -1958,4 +2012,259 @@ function formatDateString(dateStr) {
     day: 'numeric',
     year: 'numeric'
   });
+}
+
+// Post helper
+async function apiPost(endpoint, body) {
+  try {
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      state.token = null;
+      localStorage.removeItem('admin_token');
+      checkAuthentication();
+      return null;
+    }
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || `HTTP error! Status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`API Post failed for ${endpoint}:`, error);
+    return null;
+  }
+}
+
+// Delete helper
+async function apiDelete(endpoint) {
+  try {
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${state.token}`
+      }
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      state.token = null;
+      localStorage.removeItem('admin_token');
+      checkAuthentication();
+      return null;
+    }
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || `HTTP error! Status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`API Delete failed for ${endpoint}:`, error);
+    return null;
+  }
+}
+
+// ==========================================
+// TALKMINDLY MODERATION & ROOMS MANAGEMENT
+// ==========================================
+
+async function fetchTalkModerationData() {
+  const [rooms, modData, talkMetrics] = await Promise.all([
+    apiFetch('/talk/rooms'),
+    apiFetch('/talk/moderation'),
+    apiFetch('/admin/talk/metrics')
+  ]);
+
+  renderAdminRoomsList(rooms || []);
+  renderFlaggedQueue(modData || { notes: [], replies: [] }, talkMetrics);
+}
+
+function renderAdminRoomsList(rooms) {
+  const container = document.getElementById('admin-rooms-list');
+  if (!container) return;
+
+  if (rooms.length === 0) {
+    container.innerHTML = `<div style="color: rgba(255,255,255,0.4); text-align: center; padding: 10px;">No rooms active.</div>`;
+    return;
+  }
+
+  container.innerHTML = rooms.map(room => `
+    <div class="glass-card" style="padding: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(255,255,255,0.02);">
+      <div style="flex: 1; min-width: 0; text-align: left;">
+        <div style="font-weight: 700; color: white; font-size: 13px;">${escapeHtml(room.name)}</div>
+        <div style="font-size: 11px; color: rgba(255,255,255,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          ${escapeHtml(room.description || 'No description')}
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button onclick="deleteTalkRoom('${room.id}')" class="btn-secondary" style="padding: 6px 10px; border-radius: 6px; font-size: 11px; border: none; background: rgba(239, 68, 68, 0.1); color: #f87171; cursor: pointer;">
+          Delete
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderFlaggedQueue(data, talkMetrics) {
+  const container = document.getElementById('flagged-content-list');
+  const emptyState = document.getElementById('flagged-empty-state');
+  if (!container) return;
+
+  const { notes = [], replies = [] } = data;
+  const totalFlagged = notes.length + replies.length;
+
+  // Update KPI metrics using talkMetrics if available
+  if (talkMetrics) {
+    document.getElementById('kpi-talk-cost').textContent = `$${talkMetrics.totalCostUsd.toFixed(4)}`;
+    document.getElementById('kpi-talk-messages').textContent = (talkMetrics.totalNotes + talkMetrics.totalReplies).toLocaleString();
+    document.getElementById('kpi-talk-flagged').textContent = (talkMetrics.flaggedNotes + talkMetrics.flaggedReplies).toLocaleString();
+    document.getElementById('kpi-talk-rooms').textContent = talkMetrics.totalRooms.toLocaleString();
+  } else {
+    // Fallback/fallback calculation
+    let totalInput = 0;
+    let totalOutput = 0;
+    notes.forEach(n => {
+      totalInput += n.inputTokens || 0;
+      totalOutput += n.outputTokens || 0;
+    });
+    replies.forEach(r => {
+      totalInput += r.inputTokens || 0;
+      totalOutput += r.outputTokens || 0;
+    });
+    const estCost = (totalInput * 0.000000075) + (totalOutput * 0.000000300);
+    
+    document.getElementById('kpi-talk-cost').textContent = `$${estCost.toFixed(4)}`;
+    document.getElementById('kpi-talk-messages').textContent = totalFlagged;
+    document.getElementById('kpi-talk-flagged').textContent = totalFlagged;
+    document.getElementById('kpi-talk-rooms').textContent = rooms.length;
+  }
+
+  if (totalFlagged === 0) {
+    container.innerHTML = '';
+    if (emptyState) emptyState.classList.remove('hidden');
+    return;
+  }
+
+  if (emptyState) emptyState.classList.add('hidden');
+
+  let html = '';
+
+  // Render flagged notes
+  notes.forEach(note => {
+    const reason = note.isReported && note.status === 'PENDING' ? 'User Flagged' : (note.moderationReason || 'AI Crisis Risk Detected');
+    html += `
+      <tr>
+        <td>
+          <span class="badge-role" style="background: rgba(239, 68, 68, 0.15); color: #f87171; font-size: 11px; padding: 2px 6px; border-radius: 4px;">
+            Note
+          </span>
+        </td>
+        <td>
+          <div style="font-weight: 600; color: white;">${escapeHtml(note.room?.name || 'Unknown Room')}</div>
+          <div style="font-size: 10px; color: rgba(255,255,255,0.4);">${formatDateString(note.createdAt)}</div>
+        </td>
+        <td>
+          <span style="font-size: 12px; color: rgba(255,255,255,0.8);">${escapeHtml(note.nickname)}</span>
+        </td>
+        <td>
+          <div style="font-size: 12px; color: white; max-width: 300px; white-space: normal; word-break: break-word;">
+            "${escapeHtml(note.content)}"
+          </div>
+        </td>
+        <td>
+          <span style="font-size: 11px; color: #f87171; font-weight: 500;">${escapeHtml(reason)}</span>
+        </td>
+        <td class="text-right">
+          <div style="display: flex; gap: 6px; justify-content: flex-end;">
+            <button onclick="resolveModeration('note', '${note.id}', 'approve')" class="btn-primary small" style="background: #22c55e; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">
+              Approve
+            </button>
+            <button onclick="resolveModeration('note', '${note.id}', 'reject')" class="btn-secondary small" style="background: rgba(239, 68, 68, 0.1); color: #f87171; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">
+              Reject
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+
+  // Render flagged replies
+  replies.forEach(reply => {
+    const reason = reply.status === 'PENDING' ? 'User Flagged' : (reply.moderationReason || 'AI Crisis Risk Detected');
+    html += `
+      <tr>
+        <td>
+          <span class="badge-role" style="background: rgba(249, 115, 22, 0.15); color: #fb923c; font-size: 11px; padding: 2px 6px; border-radius: 4px;">
+            Reply
+          </span>
+        </td>
+        <td>
+          <div style="font-weight: 600; color: white;">Room: ${escapeHtml(reply.note?.room?.name || 'Unknown')}</div>
+          <div style="font-size: 10px; color: rgba(255,255,255,0.4); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            Note: "${escapeHtml(reply.note?.content || '')}"
+          </div>
+        </td>
+        <td>
+          <span style="font-size: 12px; color: rgba(255,255,255,0.8);">${escapeHtml(reply.nickname)}</span>
+        </td>
+        <td>
+          <div style="font-size: 12px; color: white; max-width: 300px; white-space: normal; word-break: break-word;">
+            "${escapeHtml(reply.content)}"
+          </div>
+        </td>
+        <td>
+          <span style="font-size: 11px; color: #fb923c; font-weight: 500;">${escapeHtml(reason)}</span>
+        </td>
+        <td class="text-right">
+          <div style="display: flex; gap: 6px; justify-content: flex-end;">
+            <button onclick="resolveModeration('reply', '${reply.id}', 'approve')" class="btn-primary small" style="background: #22c55e; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">
+              Approve
+            </button>
+            <button onclick="resolveModeration('reply', '${reply.id}', 'reject')" class="btn-secondary small" style="background: rgba(239, 68, 68, 0.1); color: #f87171; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">
+              Reject
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+// Global actions exposed on window for inline onclick attributes
+window.deleteTalkRoom = async function(roomId) {
+  if (confirm('Are you sure you want to delete this TalkRoom? All messages inside it will be deleted.')) {
+    const res = await apiDelete(`/talk/rooms/${roomId}`);
+    if (res && res.success) {
+      fetchTalkModerationData();
+    }
+  }
+};
+
+window.resolveModeration = async function(type, itemId, action) {
+  const res = await apiPost(`/talk/moderation/${type}/${itemId}/resolve`, { action });
+  if (res && res.success) {
+    fetchTalkModerationData();
+  }
+};
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
