@@ -29,7 +29,7 @@
         <form id="login-form">
           <div class="form-group">
             <label for="email"><i class="bx bx-envelope"></i> Email Address</label>
-            <input type="email" id="email" required placeholder="admin@wellmindly.edu" value="admin@wellmindly.edu" />
+            <input type="email" id="email" required placeholder="admin@wellmindly.com" value="admin@wellmindly.com" />
           </div>
           <div class="form-group">
             <label for="password"><i class="bx bx-lock-alt"></i> Password</label>
@@ -89,6 +89,18 @@
             <i class="bx bxs-star-half"></i>
             <span>Feedback</span>
           </button>
+          <button class="nav-item" data-tab="counselor-mgmt">
+            <i class="bx bxs-user-badge"></i>
+            <span>Counselors Portal</span>
+          </button>
+          <button class="nav-item" data-tab="master-calendar">
+            <i class="bx bxs-calendar"></i>
+            <span>Master Calendar</span>
+          </button>
+          <button class="nav-item" data-tab="dual-feedback">
+            <i class="bx bxs-message-alt-detail"></i>
+            <span>Dual Feedback</span>
+          </button>
         </nav>
 
         <div class="sidebar-footer">
@@ -96,7 +108,7 @@
             <div class="avatar">SA</div>
             <div class="user-details">
               <p class="profile-name">Super Admin</p>
-              <p class="profile-email">admin@wellmindly.edu</p>
+              <p class="profile-email">admin@wellmindly.com</p>
             </div>
           </div>
           <button id="logout-btn" class="btn-logout" title="Logout">
@@ -580,6 +592,100 @@
                 </div>
               </div>
 
+            </div>
+          </div>
+
+          <!-- TAB: Counselor Portal Management -->
+          <div id="tab-counselor-mgmt" class="tab-pane hidden">
+            <!-- Action Bar -->
+            <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 20px;">
+              <button class="btn-primary" id="btn-open-invite-counselor">
+                <i class="bx bx-user-plus" style="font-size: 18px;"></i>
+                <span>Invite New Counselor</span>
+              </button>
+            </div>
+
+            <!-- Invite Counselor Inline Form (Hidden by default) -->
+            <div id="invite-counselor-card" class="glass-card hidden" style="margin-bottom: 24px; padding: 24px;">
+              <h3 style="margin-top: 0; font-size: 16px; font-weight: 700; color: white; margin-bottom: 16px;">
+                <i class="bx bx-envelope" style="color: hsl(var(--primary-plum)); margin-right: 6px;"></i>
+                Issue Counselor Invitation
+              </h3>
+              <form id="invite-counselor-form" style="display: grid; grid-template-columns: 1fr 1fr 1.5fr auto; gap: 16px; align-items: end;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label style="font-size: 11px; font-weight: 700; color: hsl(var(--text-secondary)); text-transform: uppercase; margin-bottom: 6px; display: block;">First Name</label>
+                  <input type="text" id="invite-first-name" required placeholder="e.g. Sarah" style="width: 100%; padding: 10px 14px; font-size: 13px; border-radius: 10px; background: hsl(var(--bg-dark) / 0.6); border: 1px solid hsl(var(--border-glass)); color: white;" />
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label style="font-size: 11px; font-weight: 700; color: hsl(var(--text-secondary)); text-transform: uppercase; margin-bottom: 6px; display: block;">Last Name</label>
+                  <input type="text" id="invite-last-name" required placeholder="e.g. Jenkins" style="width: 100%; padding: 10px 14px; font-size: 13px; border-radius: 10px; background: hsl(var(--bg-dark) / 0.6); border: 1px solid hsl(var(--border-glass)); color: white;" />
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label style="font-size: 11px; font-weight: 700; color: hsl(var(--text-secondary)); text-transform: uppercase; margin-bottom: 6px; display: block;">Email Address</label>
+                  <input type="email" id="invite-email" required placeholder="s.jenkins@wellmindly.com" style="width: 100%; padding: 10px 14px; font-size: 13px; border-radius: 10px; background: hsl(var(--bg-dark) / 0.6); border: 1px solid hsl(var(--border-glass)); color: white;" />
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <button type="button" class="btn-secondary small" id="btn-cancel-invite-counselor">Cancel</button>
+                  <button type="submit" class="btn-primary small">Send Invitation</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="glass-card">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="font-size: 16px; font-weight: 700; color: white;">Active & Provisioned Counselors</h3>
+                <span class="text-secondary" style="font-size: 12px; font-weight: 600;">Directory & Access Control</span>
+              </div>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Counselor</th>
+                      <th>Credentials</th>
+                      <th>Timezone</th>
+                      <th>Status</th>
+                      <th>Sessions</th>
+                      <th class="text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="counselors-table-body">
+                    <!-- Counselors loaded dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB: Master Calendar -->
+          <div id="tab-master-calendar" class="tab-pane hidden">
+            <div id="master-calendar-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px;">
+              <!-- Sessions rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- TAB: Dual Feedback Analytics -->
+          <div id="tab-dual-feedback" class="tab-pane hidden">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+              <!-- Student to Counselor Feedback -->
+              <div class="glass-card">
+                <h3 style="font-size: 16px; font-weight: 700; color: white; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                  <i class="bx bx-star" style="color: hsl(var(--color-amber));"></i>
+                  <span>Student → Counselor Ratings</span>
+                </h3>
+                <p class="section-subtitle">Reviews submitted by students post-session</p>
+                <div id="student-to-counselor-feedback-list" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+                  <!-- Dynamically loaded -->
+                </div>
+              </div>
+
+              <!-- Counselor to Student Feedback -->
+              <div class="section-card glass-card">
+                <h3>Counselor → Student Evaluations</h3>
+                <p class="section-subtitle">Clinical engagement evaluations submitted by counselors</p>
+                <div id="counselor-to-student-feedback-list" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+                  <!-- Dynamically loaded -->
+                </div>
+              </div>
             </div>
           </div>
 

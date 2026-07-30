@@ -394,22 +394,41 @@ function switchTab(tabName) {
       viewSubtitle.textContent = 'Inspect blueprints, and analyze student response sheets.';
       break;
     case 'feedback':
-      viewTitle.textContent = 'Student Feedback Feed';
-      viewSubtitle.textContent = 'Review survey satisfaction ratings and customize text filters.';
+      viewTitle.textContent = 'Product Feedback';
+      viewSubtitle.textContent = 'Review student product reviews and experience survey ratings.';
+      fetchFeedbacks();
+      break;
+    case 'counselor-mgmt':
+      viewTitle.textContent = 'Counselor Portal Provisioning';
+      viewSubtitle.textContent = 'Invite new counselors, manage credentials, and toggle account statuses.';
+      fetchAdminCounselors();
+      break;
+    case 'master-calendar':
+      viewTitle.textContent = 'Master Sessions Calendar';
+      viewSubtitle.textContent = 'View all scheduled student counseling sessions across all counselors.';
+      fetchAdminMasterCalendar();
+      break;
+    case 'dual-feedback':
+      viewTitle.textContent = 'Dual Feedback Analytics';
+      viewSubtitle.textContent = 'Inspect Student-to-Counselor ratings and Counselor clinical evaluations.';
+      fetchAdminDualFeedback();
       break;
   }
 }
 
 // Fetch helper
-async function apiFetch(endpoint) {
+async function apiFetch(endpoint, options = {}) {
   try {
     const response = await fetch(`${BASE_URL}${endpoint}`, {
+      ...options,
       headers: {
-        'Authorization': `Bearer ${state.token}`
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.token}`,
+        ...(options.headers || {})
       }
     });
 
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401 && !endpoint.includes('/v1/admin')) {
       state.token = null;
       localStorage.removeItem('admin_token');
       checkAuthentication();
@@ -417,8 +436,8 @@ async function apiFetch(endpoint) {
     }
 
     if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || `HTTP error! Status: ${response.status}`);
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error?.message || data.error || `HTTP error! Status: ${response.status}`);
     }
 
     return await response.json();
@@ -426,6 +445,22 @@ async function apiFetch(endpoint) {
     console.error(`API Fetch failed for ${endpoint}:`, error);
     return null;
   }
+}
+
+async function apiGet(endpoint) {
+  return apiFetch(endpoint, { method: 'GET' });
+}
+
+async function apiPost(endpoint, body) {
+  return apiFetch(endpoint, { method: 'POST', body: JSON.stringify(body) });
+}
+
+async function apiPut(endpoint, body) {
+  return apiFetch(endpoint, { method: 'PUT', body: JSON.stringify(body) });
+}
+
+async function apiDelete(endpoint) {
+  return apiFetch(endpoint, { method: 'DELETE' });
 }
 
 // Load data parallel
@@ -2014,66 +2049,6 @@ function formatDateString(dateStr) {
   });
 }
 
-// Post helper
-async function apiPost(endpoint, body) {
-  try {
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${state.token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
-
-    if (response.status === 401 || response.status === 403) {
-      state.token = null;
-      localStorage.removeItem('admin_token');
-      checkAuthentication();
-      return null;
-    }
-
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || `HTTP error! Status: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error(`API Post failed for ${endpoint}:`, error);
-    return null;
-  }
-}
-
-// Delete helper
-async function apiDelete(endpoint) {
-  try {
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${state.token}`
-      }
-    });
-
-    if (response.status === 401 || response.status === 403) {
-      state.token = null;
-      localStorage.removeItem('admin_token');
-      checkAuthentication();
-      return null;
-    }
-
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || `HTTP error! Status: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error(`API Delete failed for ${endpoint}:`, error);
-    return null;
-  }
-}
-
 // ==========================================
 // TALKMINDLY MODERATION & ROOMS MANAGEMENT
 // ==========================================
@@ -2268,3 +2243,157 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+
+// Counselor Management & Provisioning APIs
+async function fetchAdminCounselors() {
+  const tableBody = document.getElementById('counselors-table-body');
+  if (!tableBody) return;
+
+  const res = await apiGet('/v1/admin/counselors');
+  if (!res || !res.success) return;
+
+  const counselors = res.data;
+  if (counselors.length === 0) {
+    tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-20 text-secondary">No counselors provisioned yet. Click "Invite New Counselor" to begin.</td></tr>`;
+    return;
+  }
+
+  tableBody.innerHTML = counselors.map(c => `
+    <tr>
+      <td>
+        <div style="font-weight: 700; font-size: 14px; color: white;">${escapeHtml(c.user?.firstName)} ${escapeHtml(c.user?.lastName)}</div>
+        <div style="font-size: 11.5px; color: hsl(var(--text-secondary)); margin-top: 2px;">${escapeHtml(c.user?.email)}</div>
+      </td>
+      <td><span class="badge-credentials">${escapeHtml(c.credentials || 'General Wellness')}</span></td>
+      <td><span style="font-size: 12px; font-weight: 600; color: hsl(var(--text-secondary));">${escapeHtml(c.user?.timezone || 'UTC')}</span></td>
+      <td>
+        <span class="badge-status ${c.status === 'ACTIVE' ? 'verified' : 'pending'}">${c.status}</span>
+      </td>
+      <td><strong style="color: white;">${c._count?.sessions || 0}</strong> <span style="font-size: 12px; color: hsl(var(--text-secondary));">sessions</span></td>
+      <td class="text-right">
+        <button class="btn-secondary small" onclick="toggleCounselorStatus('${c.id}', '${c.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE'}')">
+          <i class="bx ${c.status === 'ACTIVE' ? 'bx-block' : 'bx-check-circle'}"></i>
+          <span>${c.status === 'ACTIVE' ? 'Suspend' : 'Activate'}</span>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+window.toggleCounselorStatus = async function(id, newStatus) {
+  const res = await apiPut(`/v1/admin/counselors/${id}/status`, { status: newStatus });
+  if (res && res.success) {
+    fetchAdminCounselors();
+  }
+};
+
+// Toggle Invite Counselor Card Form
+document.addEventListener('DOMContentLoaded', () => {
+  const btnOpen = document.getElementById('btn-open-invite-counselor');
+  const btnCancel = document.getElementById('btn-cancel-invite-counselor');
+  const inviteCard = document.getElementById('invite-counselor-card');
+  const inviteForm = document.getElementById('invite-counselor-form');
+
+  if (btnOpen && inviteCard) {
+    btnOpen.addEventListener('click', () => inviteCard.classList.remove('hidden'));
+  }
+  if (btnCancel && inviteCard) {
+    btnCancel.addEventListener('click', () => inviteCard.classList.add('hidden'));
+  }
+  if (inviteForm) {
+    inviteForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const firstName = document.getElementById('invite-first-name').value;
+      const lastName = document.getElementById('invite-last-name').value;
+      const email = document.getElementById('invite-email').value;
+
+      const res = await apiPost('/v1/admin/counselors/invite', { firstName, lastName, email });
+      if (res && res.success) {
+        const setupUrl = res.data?.setupUrl || '';
+        prompt(`Invitation created for ${email}!\n\nSetup Registration Link (Copy below to share or open directly):`, setupUrl);
+        inviteForm.reset();
+        if (inviteCard) inviteCard.classList.add('hidden');
+        fetchAdminCounselors();
+      } else {
+        alert(res?.error?.message || 'Failed to send invitation');
+      }
+    });
+  }
+});
+
+// Master Calendar API
+async function fetchAdminMasterCalendar() {
+  const listContainer = document.getElementById('master-calendar-list');
+  if (!listContainer) return;
+
+  const res = await apiGet('/v1/admin/calendar');
+  if (!res || !res.success) return;
+
+  const sessions = res.data;
+  if (sessions.length === 0) {
+    listContainer.innerHTML = `<p class="text-secondary" style="grid-column: 1/-1; text-align: center; padding: 40px;">No scheduled counseling sessions found.</p>`;
+    return;
+  }
+
+  listContainer.innerHTML = sessions.map(s => {
+    const start = new Date(s.startTime);
+    return `
+      <div class="session-card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span class="badge-status ${s.status === 'CONFIRMED' ? 'verified' : 'pending'}">${s.status}</span>
+          <span style="font-size: 11px; font-weight: 600; color: hsl(var(--text-secondary)); flex-shrink: 0;">${start.toUTCString()}</span>
+        </div>
+        <div>
+          <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: white;">Student: ${escapeHtml(s.student?.firstName)} ${escapeHtml(s.student?.lastName)}</h4>
+          <p style="font-size: 12.5px; font-weight: 600; color: hsl(var(--accent-indigo)); margin: 4px 0 0 0;">Counselor: ${escapeHtml(s.counselor?.user?.firstName)} ${escapeHtml(s.counselor?.user?.lastName)}</p>
+        </div>
+        <div style="padding-top: 10px; border-top: 1px solid hsl(var(--border-glass) / 0.4); display: flex; justify-content: flex-end;">
+          <a href="${s.meetingLink}" target="_blank" class="btn-primary small">
+            <i class="bx bx-video"></i>
+            <span>Launch Meeting</span>
+          </a>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Dual Feedback Analytics API
+async function fetchAdminDualFeedback() {
+  const studentList = document.getElementById('student-to-counselor-feedback-list');
+  const counselorList = document.getElementById('counselor-to-student-feedback-list');
+
+  const res = await apiGet('/v1/admin/feedback');
+  if (!res || !res.success) return;
+
+  const { studentToCounselor, counselorToStudent } = res.data;
+
+  if (studentList) {
+    studentList.innerHTML = studentToCounselor.length === 0
+      ? `<p class="text-secondary" style="font-size: 12px;">No student feedback submitted yet.</p>`
+      : studentToCounselor.map(sf => `
+          <div style="background: hsl(var(--card-glass) / 0.4); border: 1px solid hsl(var(--border-glass)); border-left: 3px solid hsl(var(--color-green)); padding: 14px; border-radius: 12px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; font-weight: 700; color: white;">
+              <span>To: ${escapeHtml(sf.counselor?.user?.firstName)} ${escapeHtml(sf.counselor?.user?.lastName)}</span>
+              <span style="color: hsl(var(--color-amber)); font-size: 14px;">${'★'.repeat(sf.rating)}${'☆'.repeat(5 - sf.rating)}</span>
+            </div>
+            <p style="font-size: 12px; color: hsl(var(--text-secondary)); margin: 8px 0 0 0; line-height: 1.4;">"${escapeHtml(sf.comments || 'No comment provided')}"</p>
+          </div>
+        `).join('');
+  }
+
+  if (counselorList) {
+    counselorList.innerHTML = counselorToStudent.length === 0
+      ? `<p class="text-secondary" style="font-size: 12px;">No counselor evaluations submitted yet.</p>`
+      : counselorToStudent.map(cf => `
+          <div style="background: hsl(var(--card-glass) / 0.4); border: 1px solid hsl(var(--border-glass)); border-left: 3px solid hsl(var(--primary-plum)); padding: 14px; border-radius: 12px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; font-weight: 700; color: white;">
+              <span>Student: ${escapeHtml(cf.session?.student?.firstName)} ${escapeHtml(cf.session?.student?.lastName)}</span>
+              <span style="color: hsl(var(--primary-plum)); font-weight: 800; font-size: 12px;">Rating: ${cf.rating}/5</span>
+            </div>
+            <p style="font-size: 12px; color: hsl(var(--text-secondary)); margin: 8px 0 0 0; line-height: 1.4;">Summary: ${escapeHtml(cf.summaryNote || 'No summary note')}</p>
+          </div>
+        `).join('');
+  }
+}
+
