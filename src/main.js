@@ -2324,7 +2324,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Master Calendar API
+// Master Calendar API & Actions
+let masterCalendarSessions = [];
+
 async function fetchAdminMasterCalendar() {
   const listContainer = document.getElementById('master-calendar-list');
   if (!listContainer) return;
@@ -2332,34 +2334,142 @@ async function fetchAdminMasterCalendar() {
   const res = await apiGet('/v1/admin/calendar');
   if (!res || !res.success) return;
 
-  const sessions = res.data;
-  if (sessions.length === 0) {
+  masterCalendarSessions = res.data;
+  if (masterCalendarSessions.length === 0) {
     listContainer.innerHTML = `<p class="text-secondary" style="grid-column: 1/-1; text-align: center; padding: 40px;">No scheduled counseling sessions found.</p>`;
     return;
   }
 
-  listContainer.innerHTML = sessions.map(s => {
+  listContainer.innerHTML = masterCalendarSessions.map(s => {
     const start = new Date(s.startTime);
+    const isCancelled = s.status && s.status.startsWith('CANCELLED');
+
     return `
-      <div class="session-card">
+      <div class="session-card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 14px; background: hsl(var(--card-glass) / 0.5); border: 1px solid hsl(var(--border-glass)); padding: 18px; border-radius: 16px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span class="badge-status ${s.status === 'CONFIRMED' ? 'verified' : 'pending'}">${s.status}</span>
+          <span class="badge-status ${s.status === 'CONFIRMED' ? 'verified' : isCancelled ? 'suspended' : 'pending'}">${s.status}</span>
           <span style="font-size: 11px; font-weight: 600; color: hsl(var(--text-secondary)); flex-shrink: 0;">${start.toUTCString()}</span>
         </div>
+
         <div>
           <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: white;">Student: ${escapeHtml(s.student?.firstName)} ${escapeHtml(s.student?.lastName)}</h4>
           <p style="font-size: 12.5px; font-weight: 600; color: hsl(var(--accent-indigo)); margin: 4px 0 0 0;">Counselor: ${escapeHtml(s.counselor?.user?.firstName)} ${escapeHtml(s.counselor?.user?.lastName)}</p>
+          ${s.cancellationReason ? `<p style="font-size: 11.5px; color: hsl(var(--color-rose)); margin: 4px 0 0 0;">Reason: ${escapeHtml(s.cancellationReason)}</p>` : ''}
         </div>
-        <div style="padding-top: 10px; border-top: 1px solid hsl(var(--border-glass) / 0.4); display: flex; justify-content: flex-end;">
-          <a href="${s.meetingLink}" target="_blank" class="btn-primary small">
+
+        <div style="padding-top: 12px; border-top: 1px solid hsl(var(--border-glass) / 0.4); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;">
+          <div style="display: flex; gap: 6px;">
+            <button onclick="openRescheduleModal('${s.id}')" class="btn-secondary small" style="padding: 6px 10px; font-size: 11.5px;" title="Reschedule Session">
+              <i class="bx bx-calendar-edit"></i>
+              <span>Reschedule</span>
+            </button>
+
+            ${!isCancelled ? `
+              <button onclick="adminCancelSession('${s.id}')" class="btn-secondary small" style="padding: 6px 10px; font-size: 11.5px; color: hsl(var(--color-rose));" title="Cancel Session">
+                <i class="bx bx-x-circle"></i>
+                <span>Cancel</span>
+              </button>
+            ` : ''}
+
+            <button onclick="adminDeleteSession('${s.id}')" class="btn-secondary small" style="padding: 6px 10px; font-size: 11.5px; opacity: 0.8;" title="Delete Session">
+              <i class="bx bx-trash"></i>
+              <span>Delete</span>
+            </button>
+          </div>
+
+          <a href="${s.meetingLink}" target="_blank" class="btn-primary small" style="padding: 6px 12px; font-size: 11.5px;">
             <i class="bx bx-video"></i>
-            <span>Launch Meeting</span>
+            <span>Meeting Link</span>
           </a>
         </div>
       </div>
     `;
   }).join('');
 }
+
+// Global functions for cancel, delete, and reschedule
+window.adminCancelSession = async function(sessionId) {
+  const reason = prompt('Enter cancellation reason (optional):', 'Cancelled by Administrator from Master Calendar');
+  if (reason === null) return;
+
+  const res = await apiPut(`/v1/admin/sessions/${sessionId}/cancel`, { reason });
+  if (res && res.success) {
+    fetchAdminMasterCalendar();
+  } else {
+    alert(res?.error?.message || 'Failed to cancel session');
+  }
+};
+
+window.adminDeleteSession = async function(sessionId) {
+  if (!confirm('Are you sure you want to delete this session from the Master Calendar?')) return;
+
+  const res = await apiDelete(`/v1/admin/sessions/${sessionId}`);
+  if (res && res.success) {
+    fetchAdminMasterCalendar();
+  } else {
+    alert(res?.error?.message || 'Failed to delete session');
+  }
+};
+
+window.openRescheduleModal = async function(sessionId) {
+  const session = masterCalendarSessions.find(s => s.id === sessionId);
+  if (!session) return;
+
+  document.getElementById('reschedule-session-id').value = session.id;
+
+  const d = new Date(session.startTime);
+  const isoStr = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  document.getElementById('reschedule-start-time').value = isoStr;
+
+  const counselorSelect = document.getElementById('reschedule-counselor-id');
+  counselorSelect.innerHTML = '<option value="">Loading counselors...</option>';
+
+  const cRes = await apiGet('/v1/admin/counselors?limit=50');
+  if (cRes && cRes.success) {
+    counselorSelect.innerHTML = cRes.data.map(c => `
+      <option value="${c.id}" ${c.id === session.counselorId ? 'selected' : ''}>
+        ${escapeHtml(c.user.firstName)} ${escapeHtml(c.user.lastName)} (${escapeHtml(c.credentials)})
+      </option>
+    `).join('');
+  }
+
+  document.getElementById('modal-reschedule-session').classList.remove('hidden');
+};
+
+window.closeRescheduleModal = function() {
+  document.getElementById('modal-reschedule-session').classList.add('hidden');
+};
+
+// Reschedule Form Submission Event Listener
+document.addEventListener('DOMContentLoaded', () => {
+  const rescheduleForm = document.getElementById('reschedule-session-form');
+  if (rescheduleForm) {
+    rescheduleForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const sessionId = document.getElementById('reschedule-session-id').value;
+      const startTimeInput = document.getElementById('reschedule-start-time').value;
+      const counselorId = document.getElementById('reschedule-counselor-id').value;
+
+      if (!startTimeInput || !sessionId) return;
+
+      const startDate = new Date(startTimeInput);
+      const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+
+      const res = await apiPut(`/v1/admin/sessions/${sessionId}/reschedule`, {
+        startTime: startDate.toISOString(),
+        endTime: endDate.toISOString(),
+        counselorId,
+      });
+
+      if (res && res.success) {
+        closeRescheduleModal();
+        fetchAdminMasterCalendar();
+      } else {
+        alert(res?.error?.message || 'Failed to reschedule session. Please check slot availability.');
+      }
+    });
+  }
+});
 
 // Dual Feedback Analytics API
 async function fetchAdminDualFeedback() {
