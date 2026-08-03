@@ -895,6 +895,34 @@
       </div>
     </div>
 
+    <!-- Global Custom Toast Container -->
+    <div id="admin-toast-container" style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;"></div>
+
+    <!-- Modal: Custom Alert / Info Modal -->
+    <div id="modal-custom-alert" class="modal-wrapper hidden" style="z-index: 9998;">
+      <div class="modal-card width-md" style="max-width: 480px;">
+        <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+          <div>
+            <h2 id="custom-alert-title" style="font-size: 18px; font-weight: 700; color: white;">Notification</h2>
+          </div>
+          <button class="btn-close-modal" onclick="closeCustomAlertModal()"><i class="bx bx-x"></i></button>
+        </div>
+        <div class="modal-body" style="padding: 24px;">
+          <p id="custom-alert-message" style="font-size: 14px; line-height: 1.6; color: #cbd5e1; white-space: pre-line; margin-bottom: 16px;"></p>
+          <div id="custom-alert-link-container" class="hidden" style="margin-bottom: 16px; background: rgba(15, 23, 42, 0.8); padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15);">
+            <label style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; display: block; margin-bottom: 6px;">Setup Link</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="custom-alert-link-input" readonly style="flex: 1; font-size: 12px; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); color: white;" />
+              <button id="btn-copy-alert-link" class="btn-primary small" style="font-size: 11px; padding: 6px 12px;">Copy</button>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: flex-end;">
+            <button class="btn-primary" onclick="closeCustomAlertModal()">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- JS Logic script -->
     <script type="module" src="/src/main.js"></script>
   </body>

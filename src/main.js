@@ -1825,12 +1825,20 @@ function renderCounselorContacts(totalCount = state.counselorContacts.length) {
       <td><span class="badge-role">${item.credentials}</span></td>
       <td><span>${formatDateString(item.createdAt)}</span></td>
       <td class="text-right">
-        <button class="btn-view-details" onclick="openInquiryDetails('counselor', '${item.id}')" style="margin-right: 6px;">
-          <i class="bx bx-show"></i> View
-        </button>
-        <button class="btn-view-details" onclick="deleteInquiry('counselor', '${item.id}')" style="background: rgba(220, 38, 38, 0.2); border-color: rgba(220, 38, 38, 0.4); color: #ef4444;">
-          <i class="bx bx-trash"></i>
-        </button>
+        <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
+          <button class="btn-view-details" onclick="openInquiryDetails('counselor', '${item.id}')" title="View Application Details">
+            <i class="bx bx-show"></i> View
+          </button>
+          <button class="btn-view-details" onclick="requestCounselorDocs('${item.id}')" style="background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.4); color: #818cf8;" title="Request Certificates & Verification Docs">
+            <i class="bx bx-file-find"></i> Docs
+          </button>
+          <button class="btn-view-details" onclick="approveCounselorApplication('${item.id}')" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4); color: #34d399;" title="Approve & Onboard Counselor">
+            <i class="bx bx-check-shield"></i> Approve
+          </button>
+          <button class="btn-view-details" onclick="deleteInquiry('counselor', '${item.id}')" style="background: rgba(220, 38, 38, 0.2); border-color: rgba(220, 38, 38, 0.4); color: #ef4444;" title="Delete Application">
+            <i class="bx bx-trash"></i>
+          </button>
+        </div>
       </td>
     `;
     listEl.appendChild(row);
@@ -1996,6 +2004,23 @@ function openInquiryDetails(type, id) {
     group.appendChild(contentEl);
     container.appendChild(group);
   });
+
+  if (type === 'counselor') {
+    const actionsBox = document.createElement('div');
+    actionsBox.style.display = 'flex';
+    actionsBox.style.gap = '12px';
+    actionsBox.style.marginTop = '16px';
+    actionsBox.style.justifyContent = 'flex-end';
+    actionsBox.innerHTML = `
+      <button class="btn-secondary" onclick="requestCounselorDocs('${item.id}')" style="background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.4); color: #818cf8; padding: 8px 14px; display: flex; align-items: center; gap: 6px;">
+        <i class="bx bx-file-find"></i> Request Certificates & Docs
+      </button>
+      <button class="btn-primary" onclick="approveCounselorApplication('${item.id}')" style="background: #10b981; border: none; padding: 8px 14px; display: flex; align-items: center; gap: 6px;">
+        <i class="bx bx-check-shield"></i> Approve & Onboard Counselor
+      </button>
+    `;
+    container.appendChild(actionsBox);
+  }
 
   document.getElementById('modal-inquiry').classList.remove('hidden');
 }
@@ -2310,15 +2335,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const lastName = document.getElementById('invite-last-name').value;
       const email = document.getElementById('invite-email').value;
 
+      showToast('Sending counselor invitation email...', 'info');
       const res = await apiPost('/v1/admin/counselors/invite', { firstName, lastName, email });
       if (res && res.success) {
         const setupUrl = res.data?.setupUrl || '';
-        prompt(`Invitation created for ${email}!\n\nSetup Registration Link (Copy below to share or open directly):`, setupUrl);
+        showCustomAlert(
+          'Counselor Invitation Sent!',
+          `Invitation created for ${firstName} ${lastName} (${email}). An email has been sent (BCC: wellmindly@gmail.com).\n\nSetup Registration Link (Copy to share directly):`,
+          setupUrl
+        );
         inviteForm.reset();
         if (inviteCard) inviteCard.classList.add('hidden');
         fetchAdminCounselors();
       } else {
-        alert(res?.error?.message || 'Failed to send invitation');
+        showToast(res?.error?.message || 'Failed to send invitation', 'error');
       }
     });
   }
@@ -2509,4 +2539,148 @@ async function fetchAdminDualFeedback() {
         `).join('');
   }
 }
+
+// ── CUSTOM UI ALERT & TOAST NOTIFICATION SYSTEM ─────────────────────────
+function showToast(message, type = 'success') {
+  const container = document.getElementById('admin-toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `admin-toast ${type}`;
+  toast.style.cssText = `
+    pointer-events: auto;
+    background: ${type === 'error' ? '#ef4444' : type === 'info' ? '#3b82f6' : '#10b981'};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: fadeIn 0.3s ease;
+    max-width: 420px;
+  `;
+  
+  toast.innerHTML = `
+    <i class="bx ${type === 'error' ? 'bx-error-circle' : type === 'info' ? 'bx-info-circle' : 'bx-check-circle'}" style="font-size: 18px;"></i>
+    <span style="flex: 1;">${escapeHtml(message)}</span>
+  `;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
+function showCustomAlert(title, message, setupUrl = null) {
+  const modal = document.getElementById('modal-custom-alert');
+  const titleEl = document.getElementById('custom-alert-title');
+  const msgEl = document.getElementById('custom-alert-message');
+  const linkBox = document.getElementById('custom-alert-link-container');
+  const linkInput = document.getElementById('custom-alert-link-input');
+  const btnCopy = document.getElementById('btn-copy-alert-link');
+
+  if (!modal || !titleEl || !msgEl) {
+    alert(`${title}\n\n${message}${setupUrl ? '\n\nLink: ' + setupUrl : ''}`);
+    return;
+  }
+
+  titleEl.textContent = title;
+  msgEl.textContent = message;
+
+  if (setupUrl) {
+    linkBox.classList.remove('hidden');
+    linkInput.value = setupUrl;
+    btnCopy.onclick = () => {
+      navigator.clipboard.writeText(setupUrl);
+      showToast('Registration link copied to clipboard!', 'info');
+    };
+  } else {
+    linkBox.classList.add('hidden');
+  }
+
+  modal.classList.remove('hidden');
+}
+
+function closeCustomAlertModal() {
+  const modal = document.getElementById('modal-custom-alert');
+  if (modal) modal.classList.add('hidden');
+}
+
+window.requestCounselorDocs = async function(id) {
+  const item = state.counselorContacts.find(c => c.id === id);
+  showToast('Sending document request email...', 'info');
+  const res = await apiPost(`/contacts/counselor/${id}/request-docs`, {});
+  if (res && res.success) {
+    showToast(res.message || `Document request email sent to ${item?.email || 'applicant'}`, 'success');
+  } else {
+    showToast(res?.error?.message || 'Failed to send document request email', 'error');
+  }
+};
+
+window.approveCounselorApplication = async function(id) {
+  const item = state.counselorContacts.find(c => c.id === id);
+  showToast('Approving counselor application...', 'info');
+  const res = await apiPost(`/contacts/counselor/${id}/approve-onboard`, {});
+  if (res && res.success) {
+    closeInquiryModal();
+    if (res.setupUrl) {
+      showCustomAlert(
+        'Counselor Application Approved!',
+        `Application for ${item?.name || 'Counselor'} (${item?.email}) has been approved.\n\nAn onboarding registration link has been emailed to the applicant (BCC: wellmindly@gmail.com). You can also copy the link below:`,
+        res.setupUrl
+      );
+    } else {
+      showToast(res.message || 'Counselor approved and account activated!', 'success');
+    }
+    fetchCounselorContacts();
+  } else {
+    showToast(res?.error?.message || 'Failed to approve counselor application', 'error');
+  }
+};
+
+window.uploadCounselorAvatar = async function(fileInput, targetInputId, previewImgId) {
+  const file = fileInput.files?.[0];
+  if (!file) return;
+
+  showToast('Uploading image to AWS S3 bucket (wellmindly-assets)...', 'info');
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const base64Data = e.target.result;
+    const res = await apiPost('/admin/upload', {
+      fileName: file.name,
+      mimeType: file.type,
+      base64Data,
+      folder: 'avatars'
+    });
+
+    if (res && res.success && res.url) {
+      if (targetInputId) {
+        const input = document.getElementById(targetInputId);
+        if (input) input.value = res.url;
+      }
+      if (previewImgId) {
+        const img = document.getElementById(previewImgId);
+        if (img) {
+          img.src = res.url;
+          img.classList.remove('hidden');
+        }
+      }
+      showToast('Profile picture uploaded to AWS S3 successfully!', 'success');
+    } else {
+      showToast(res?.error?.message || 'Failed to upload image to S3', 'error');
+    }
+  };
+  reader.readAsDataURL(file);
+};
+
+window.showToast = showToast;
+window.showCustomAlert = showCustomAlert;
+window.closeCustomAlertModal = closeCustomAlertModal;
 
