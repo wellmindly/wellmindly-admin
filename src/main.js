@@ -2648,7 +2648,7 @@ window.uploadCounselorAvatar = async function(fileInput, targetInputId, previewI
   const file = fileInput.files?.[0];
   if (!file) return;
 
-  showToast('Uploading image to AWS S3 bucket (wellmindly-assets)...', 'info');
+  showToast('Uploading profile image...', 'info');
 
   const reader = new FileReader();
   reader.onload = async (e) => {
@@ -2672,9 +2672,9 @@ window.uploadCounselorAvatar = async function(fileInput, targetInputId, previewI
           img.classList.remove('hidden');
         }
       }
-      showToast('Profile picture uploaded to AWS S3 successfully!', 'success');
+      showToast('Profile picture uploaded successfully!', 'success');
     } else {
-      showToast(res?.error?.message || 'Failed to upload image to S3', 'error');
+      showToast(res?.error?.message || 'Failed to upload image', 'error');
     }
   };
   reader.readAsDataURL(file);
