@@ -2,9 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WellMindly Admin Portal</title>
+    <title>WellMindly | Admin & Clinical Command Center</title>
     <!-- Google Fonts: Outfit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,8 +13,8 @@
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
     <!-- Chart.js CDN for Visual Analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" crossorigin src="./assets/index-Bsw2h87_.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-CfmmpIu0.css">
+    <script type="module" crossorigin src="/assets/index-VLCrx_7a.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Bo3spht-.css">
   </head>
   <body>
     <!-- 1. Authentication Login Screen -->
@@ -30,7 +30,7 @@
         <form id="login-form">
           <div class="form-group">
             <label for="email"><i class="bx bx-envelope"></i> Email Address</label>
-            <input type="email" id="email" required placeholder="admin@wellmindly.edu" value="admin@wellmindly.edu" />
+            <input type="email" id="email" required placeholder="admin@wellmindly.com" value="admin@wellmindly.com" />
           </div>
           <div class="form-group">
             <label for="password"><i class="bx bx-lock-alt"></i> Password</label>
@@ -90,6 +90,18 @@
             <i class="bx bxs-star-half"></i>
             <span>Feedback</span>
           </button>
+          <button class="nav-item" data-tab="counselor-mgmt">
+            <i class="bx bxs-user-badge"></i>
+            <span>Counselors Portal</span>
+          </button>
+          <button class="nav-item" data-tab="master-calendar">
+            <i class="bx bxs-calendar"></i>
+            <span>Master Calendar</span>
+          </button>
+          <button class="nav-item" data-tab="dual-feedback">
+            <i class="bx bxs-message-alt-detail"></i>
+            <span>Dual Feedback</span>
+          </button>
         </nav>
 
         <div class="sidebar-footer">
@@ -97,7 +109,7 @@
             <div class="avatar">SA</div>
             <div class="user-details">
               <p class="profile-name">Super Admin</p>
-              <p class="profile-email">admin@wellmindly.edu</p>
+              <p class="profile-email">admin@wellmindly.com</p>
             </div>
           </div>
           <button id="logout-btn" class="btn-logout" title="Logout">
@@ -584,6 +596,100 @@
             </div>
           </div>
 
+          <!-- TAB: Counselor Portal Management -->
+          <div id="tab-counselor-mgmt" class="tab-pane hidden">
+            <!-- Action Bar -->
+            <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 20px;">
+              <button class="btn-primary" id="btn-open-invite-counselor">
+                <i class="bx bx-user-plus" style="font-size: 18px;"></i>
+                <span>Invite New Counselor</span>
+              </button>
+            </div>
+
+            <!-- Invite Counselor Inline Form (Hidden by default) -->
+            <div id="invite-counselor-card" class="glass-card hidden" style="margin-bottom: 24px; padding: 24px;">
+              <h3 style="margin-top: 0; font-size: 16px; font-weight: 700; color: white; margin-bottom: 16px;">
+                <i class="bx bx-envelope" style="color: hsl(var(--primary-plum)); margin-right: 6px;"></i>
+                Issue Counselor Invitation
+              </h3>
+              <form id="invite-counselor-form" style="display: grid; grid-template-columns: 1fr 1fr 1.5fr auto; gap: 16px; align-items: end;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label style="font-size: 11px; font-weight: 700; color: hsl(var(--text-secondary)); text-transform: uppercase; margin-bottom: 6px; display: block;">First Name</label>
+                  <input type="text" id="invite-first-name" required placeholder="e.g. Sarah" style="width: 100%; padding: 10px 14px; font-size: 13px; border-radius: 10px; background: hsl(var(--bg-dark) / 0.6); border: 1px solid hsl(var(--border-glass)); color: white;" />
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label style="font-size: 11px; font-weight: 700; color: hsl(var(--text-secondary)); text-transform: uppercase; margin-bottom: 6px; display: block;">Last Name</label>
+                  <input type="text" id="invite-last-name" required placeholder="e.g. Jenkins" style="width: 100%; padding: 10px 14px; font-size: 13px; border-radius: 10px; background: hsl(var(--bg-dark) / 0.6); border: 1px solid hsl(var(--border-glass)); color: white;" />
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label style="font-size: 11px; font-weight: 700; color: hsl(var(--text-secondary)); text-transform: uppercase; margin-bottom: 6px; display: block;">Email Address</label>
+                  <input type="email" id="invite-email" required placeholder="s.jenkins@wellmindly.com" style="width: 100%; padding: 10px 14px; font-size: 13px; border-radius: 10px; background: hsl(var(--bg-dark) / 0.6); border: 1px solid hsl(var(--border-glass)); color: white;" />
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <button type="button" class="btn-secondary small" id="btn-cancel-invite-counselor">Cancel</button>
+                  <button type="submit" class="btn-primary small">Send Invitation</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="glass-card">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="font-size: 16px; font-weight: 700; color: white;">Active & Provisioned Counselors</h3>
+                <span class="text-secondary" style="font-size: 12px; font-weight: 600;">Directory & Access Control</span>
+              </div>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Counselor</th>
+                      <th>Credentials</th>
+                      <th>Timezone</th>
+                      <th>Status</th>
+                      <th>Sessions</th>
+                      <th class="text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="counselors-table-body">
+                    <!-- Counselors loaded dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB: Master Calendar -->
+          <div id="tab-master-calendar" class="tab-pane hidden">
+            <div id="master-calendar-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px;">
+              <!-- Sessions rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- TAB: Dual Feedback Analytics -->
+          <div id="tab-dual-feedback" class="tab-pane hidden">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+              <!-- Student to Counselor Feedback -->
+              <div class="glass-card">
+                <h3 style="font-size: 16px; font-weight: 700; color: white; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                  <i class="bx bx-star" style="color: hsl(var(--color-amber));"></i>
+                  <span>Student → Counselor Ratings</span>
+                </h3>
+                <p class="section-subtitle">Reviews submitted by students post-session</p>
+                <div id="student-to-counselor-feedback-list" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+                  <!-- Dynamically loaded -->
+                </div>
+              </div>
+
+              <!-- Counselor to Student Feedback -->
+              <div class="section-card glass-card">
+                <h3>Counselor → Student Evaluations</h3>
+                <p class="section-subtitle">Clinical engagement evaluations submitted by counselors</p>
+                <div id="counselor-to-student-feedback-list" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+                  <!-- Dynamically loaded -->
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </main>
     </div>
@@ -750,6 +856,69 @@
         <div class="modal-body scrollable" style="padding: 24px;">
           <div id="inquiry-details-container" style="display: flex; flex-direction: column; gap: 16px;">
             <!-- Rendered dynamically in main.js -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Reschedule Master Calendar Session -->
+    <div id="modal-reschedule-session" class="modal-wrapper hidden">
+      <div class="modal-card width-md">
+        <div class="modal-header">
+          <div>
+            <h2>Reschedule Session</h2>
+            <p class="text-secondary" id="reschedule-modal-subtitle">Move meeting to a new date, time, or counselor</p>
+          </div>
+          <button class="btn-close-modal" onclick="closeRescheduleModal()"><i class="bx bx-x"></i></button>
+        </div>
+        <div class="modal-body" style="padding: 24px;">
+          <form id="reschedule-session-form" style="display: flex; flex-direction: column; gap: 16px;">
+            <input type="hidden" id="reschedule-session-id" />
+            
+            <div class="form-group">
+              <label for="reschedule-start-time" style="font-size: 13px; font-weight: 600; color: white;">New Date & Time</label>
+              <input type="datetime-local" id="reschedule-start-time" class="form-input" required style="background: rgba(15, 23, 42, 0.6); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; width: 100%;" />
+            </div>
+
+            <div class="form-group">
+              <label for="reschedule-counselor-id" style="font-size: 13px; font-weight: 600; color: white;">Assign Counselor</label>
+              <select id="reschedule-counselor-id" class="form-input" required style="background: #0f172a; color: white; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; width: 100%;">
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 12px;">
+              <button type="button" class="btn-secondary" onclick="closeRescheduleModal()">Cancel</button>
+              <button type="submit" class="btn-primary">Save Reschedule</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Global Custom Toast Container -->
+    <div id="admin-toast-container" style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;"></div>
+
+    <!-- Modal: Custom Alert / Info Modal -->
+    <div id="modal-custom-alert" class="modal-wrapper hidden" style="z-index: 9998;">
+      <div class="modal-card width-md" style="max-width: 480px;">
+        <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+          <div>
+            <h2 id="custom-alert-title" style="font-size: 18px; font-weight: 700; color: white;">Notification</h2>
+          </div>
+          <button class="btn-close-modal" onclick="closeCustomAlertModal()"><i class="bx bx-x"></i></button>
+        </div>
+        <div class="modal-body" style="padding: 24px;">
+          <p id="custom-alert-message" style="font-size: 14px; line-height: 1.6; color: #cbd5e1; white-space: pre-line; margin-bottom: 16px;"></p>
+          <div id="custom-alert-link-container" class="hidden" style="margin-bottom: 16px; background: rgba(15, 23, 42, 0.8); padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15);">
+            <label style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; display: block; margin-bottom: 6px;">Setup Link</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="custom-alert-link-input" readonly style="flex: 1; font-size: 12px; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); color: white;" />
+              <button id="btn-copy-alert-link" class="btn-primary small" style="font-size: 11px; padding: 6px 12px;">Copy</button>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: flex-end;">
+            <button class="btn-primary" onclick="closeCustomAlertModal()">OK</button>
           </div>
         </div>
       </div>
