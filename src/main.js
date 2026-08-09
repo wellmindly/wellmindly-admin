@@ -258,7 +258,7 @@ function setupEventHandlers() {
       const description = descInput ? descInput.value.trim() : '';
 
       if (!name) {
-        alert('Room name is required.');
+        showToast('Room name is required.', 'error');
         return;
       }
 
@@ -1140,7 +1140,7 @@ async function openStudentDetails(studentId) {
 
   const data = await apiFetch(`/admin/students/${studentId}`);
   if (!data || !data.student) {
-    alert('Failed to retrieve student profile.');
+    showToast('Failed to retrieve student profile.', 'error');
     closeStudentModal();
     return;
   }
@@ -1458,7 +1458,7 @@ window.openAssessmentSheetDirect = async function(resultId, quizId) {
   const result = results.find(r => r.id === resultId);
   
   if (!result) {
-    alert('Assessment results mapping failed.');
+    showToast('Assessment results mapping failed.', 'error');
     return;
   }
 
@@ -1497,7 +1497,7 @@ async function openAssessmentSheet(resultId) {
   }
 
   if (!result) {
-    alert('Assessment detail page could not be parsed.');
+    showToast('Assessment detail page could not be parsed.', 'error');
     closeAssessmentModal();
     return;
   }
@@ -2046,7 +2046,7 @@ async function deleteInquiry(type, id) {
       throw new Error(data.error || 'Failed to delete record.');
     }
 
-    alert('Record deleted successfully.');
+    showToast('Record deleted successfully.', 'info');
     closeInquiryModal();
 
     // Reload tab data
@@ -2059,7 +2059,7 @@ async function deleteInquiry(type, id) {
     }
   } catch (error) {
     console.error('Delete inquiry failed:', error);
-    alert(error.message || 'Failed to delete inquiry');
+    showToast(error.message || 'Failed to delete inquiry', 'error');
   }
 }
 
@@ -2426,7 +2426,7 @@ window.adminCancelSession = async function(sessionId) {
   if (res && res.success) {
     fetchAdminMasterCalendar();
   } else {
-    alert(res?.error?.message || 'Failed to cancel session');
+    showToast(res?.error?.message || 'Failed to cancel session', 'error');
   }
 };
 
@@ -2437,7 +2437,7 @@ window.adminDeleteSession = async function(sessionId) {
   if (res && res.success) {
     fetchAdminMasterCalendar();
   } else {
-    alert(res?.error?.message || 'Failed to delete session');
+    showToast(res?.error?.message || 'Failed to delete session', 'error');
   }
 };
 
@@ -2495,7 +2495,7 @@ document.addEventListener('DOMContentLoaded', () => {
         closeRescheduleModal();
         fetchAdminMasterCalendar();
       } else {
-        alert(res?.error?.message || 'Failed to reschedule session. Please check slot availability.');
+        showToast(res?.error?.message || 'Failed to reschedule session. Please check slot availability.', 'error');
       }
     });
   }
@@ -2586,7 +2586,7 @@ function showCustomAlert(title, message, setupUrl = null) {
   const btnCopy = document.getElementById('btn-copy-alert-link');
 
   if (!modal || !titleEl || !msgEl) {
-    alert(`${title}\n\n${message}${setupUrl ? '\n\nLink: ' + setupUrl : ''}`);
+    showToast(`${title}: ${message}`, 'info');
     return;
   }
 
