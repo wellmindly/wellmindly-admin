@@ -1,7 +1,7 @@
 // WellMindly Admin Portal - Core Logic (Refined)
 
 // API Configuration
-let rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+let rawApiUrl = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://api.wellmindly.com/api' : 'http://localhost:5000/api');
 if (rawApiUrl.endsWith('/')) rawApiUrl = rawApiUrl.slice(0, -1);
 if (!rawApiUrl.endsWith('/api')) rawApiUrl += '/api';
 const BASE_URL = rawApiUrl;
@@ -3796,7 +3796,10 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast('Sending counselor invitation email...', 'info');
       const res = await apiPost('/v1/admin/counselors/invite', { firstName, lastName, email });
       if (res && res.success) {
-        const setupUrl = res.data?.setupUrl || '';
+        let setupUrl = res.data?.setupUrl || '';
+        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && setupUrl.includes('localhost')) {
+          setupUrl = setupUrl.replace(/^https?:\/\/localhost(:\d+)?/, 'https://counselor.wellmindly.com');
+        }
         showCustomAlert(
           'Counselor Invitation Sent!',
           `Invitation created for ${firstName} ${lastName} (${email}). An email has been sent (BCC: wellmindly@gmail.com).\n\nSetup Registration Link (Copy to share directly):`,
