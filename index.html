@@ -5,10 +5,10 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WellMindly | Admin & Clinical Command Center</title>
-    <!-- Google Fonts: Outfit -->
+    <!-- Google Fonts: Outfit & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <!-- Boxicons for Icons -->
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
     <!-- Chart.js CDN for Visual Analytics -->
@@ -18,13 +18,15 @@
   <body>
     <!-- 1. Authentication Login Screen -->
     <div id="login-container" class="auth-wrapper">
+      <div class="auth-ambient-glow"></div>
       <div class="glass-auth-card">
         <div class="auth-header">
           <div class="logo-circle">
-            <i class="bx bxs-shield"></i>
+            <i class="bx bxs-shield-plus"></i>
           </div>
           <h1>WellMindly</h1>
-          <p>Administrative Control Center</p>
+          <p>Administrative & Clinical Command Center</p>
+          <span class="auth-badge-role"><i class="bx bx-lock-alt"></i> Clinical Admin Access</span>
         </div>
         <form id="login-form">
           <div class="form-group">
@@ -32,14 +34,19 @@
             <input type="email" id="email" required placeholder="admin@wellmindly.com" autocomplete="username" />
           </div>
           <div class="form-group">
-            <label for="password"><i class="bx bx-lock-alt"></i> Password</label>
-            <input type="password" id="password" required placeholder="••••••••" autocomplete="current-password" />
+            <label for="password"><i class="bx bx-lock-alt"></i> Master Password</label>
+            <div class="input-with-action">
+              <input type="password" id="password" required placeholder="••••••••" autocomplete="current-password" />
+              <button type="button" id="btn-toggle-login-pwd" class="btn-toggle-pwd" title="Toggle password visibility">
+                <i class="bx bx-show" id="icon-toggle-login-pwd"></i>
+              </button>
+            </div>
           </div>
           <div id="login-error" class="error-banner hidden">
             <i class="bx bx-error-circle"></i> <span id="error-message">Invalid credentials.</span>
           </div>
-          <button type="submit" class="btn-auth">
-            <span>Access Portal</span>
+          <button type="submit" id="btn-submit-login" class="btn-auth">
+            <span>Enter Command Center</span>
             <i class="bx bx-right-arrow-alt"></i>
           </button>
         </form>
@@ -48,58 +55,71 @@
 
     <!-- 2. Main Admin Dashboard -->
     <div id="app-container" class="app-layout hidden">
+      <!-- Mobile Sidebar Backdrop Overlay -->
+      <div id="sidebar-backdrop" class="sidebar-backdrop hidden"></div>
+
       <!-- Sidebar Navigation -->
-      <aside class="sidebar-aside">
+      <aside class="sidebar-aside" id="sidebar-aside">
         <div class="sidebar-logo">
-          <i class="bx bxs-heart-circle"></i>
-          <span class="logo-text">WellMindly</span>
+          <div class="sidebar-logo-icon">
+            <i class="bx bxs-heart-circle"></i>
+          </div>
+          <div class="flex-col">
+            <span class="logo-text">WellMindly</span>
+            <span style="font-size: 10px; color: var(--color-emerald); font-weight: 700; letter-spacing: 0.5px;">COMMAND CENTER</span>
+          </div>
           <span class="badge-role">ADMIN</span>
         </div>
         
         <nav class="sidebar-nav">
+          <div class="nav-section-title">Clinical & Intelligence</div>
           <button class="nav-item active" data-tab="overview">
             <i class="bx bxs-dashboard"></i>
             <span>Overview</span>
           </button>
-          <button class="nav-item" data-tab="university">
-            <i class="bx bxs-school"></i>
-            <span>University Requests</span>
-          </button>
-          <button class="nav-item" data-tab="counselors">
-            <i class="bx bxs-user-voice"></i>
-            <span>Counselor Apps</span>
-          </button>
-          <button class="nav-item" data-tab="contacts">
-            <i class="bx bxs-contact"></i>
-            <span>General Contacts</span>
-          </button>
-          <button class="nav-item" data-tab="moderation">
-            <i class="bx bxs-message-rounded-dots"></i>
-            <span>TalkMindly Moderation</span>
-          </button>
           <button class="nav-item" data-tab="students">
             <i class="bx bxs-user-detail"></i>
-            <span>Students</span>
+            <span>Student Registry</span>
           </button>
           <button class="nav-item" data-tab="quizzes">
             <i class="bx bxs-book-heart"></i>
-            <span>Quizzes</span>
+            <span>Assessments Hub</span>
           </button>
-          <button class="nav-item" data-tab="feedback">
-            <i class="bx bxs-star-half"></i>
-            <span>Feedback</span>
+          <button class="nav-item" data-tab="moderation">
+            <i class="bx bxs-shield-quarter"></i>
+            <span>TalkMindly Safety</span>
+          </button>
+
+          <div class="nav-section-title">Counselor Operations</div>
+          <button class="nav-item" data-tab="counselors">
+            <i class="bx bxs-user-plus"></i>
+            <span>Counselor Apps</span>
           </button>
           <button class="nav-item" data-tab="counselor-mgmt">
             <i class="bx bxs-user-badge"></i>
-            <span>Counselors Portal</span>
+            <span>Counselor Directory</span>
           </button>
           <button class="nav-item" data-tab="master-calendar">
-            <i class="bx bxs-calendar"></i>
+            <i class="bx bxs-calendar-event"></i>
             <span>Master Calendar</span>
           </button>
           <button class="nav-item" data-tab="dual-feedback">
             <i class="bx bxs-message-alt-detail"></i>
             <span>Dual Feedback</span>
+          </button>
+
+          <div class="nav-section-title">Inquiries & Partnerships</div>
+          <button class="nav-item" data-tab="university">
+            <i class="bx bxs-school"></i>
+            <span>University Requests</span>
+          </button>
+          <button class="nav-item" data-tab="contacts">
+            <i class="bx bxs-contact"></i>
+            <span>General Contacts</span>
+          </button>
+          <button class="nav-item" data-tab="feedback">
+            <i class="bx bxs-star-half"></i>
+            <span>Feedback Analytics</span>
           </button>
         </nav>
 
@@ -111,7 +131,7 @@
               <p class="profile-email">admin@wellmindly.com</p>
             </div>
           </div>
-          <button id="logout-btn" class="btn-logout" title="Logout">
+          <button id="logout-btn" class="btn-logout" title="Sign Out">
             <i class="bx bx-log-out-circle"></i>
             <span>Sign Out</span>
           </button>
@@ -122,9 +142,19 @@
       <main class="main-viewport">
         <!-- Top Bar Header -->
         <header class="top-header">
-          <div class="header-title-area">
-            <h2 id="view-title">Dashboard Overview</h2>
-            <p id="view-subtitle" class="text-secondary">Summary and trends across WellMindly students.</p>
+          <div class="header-left-group">
+            <button id="btn-mobile-sidebar-toggle" class="btn-hamburger" title="Toggle Menu">
+              <i class="bx bx-menu"></i>
+            </button>
+            <div class="header-title-area">
+              <div class="header-breadcrumbs">
+                <span>WellMindly</span>
+                <i class="bx bx-chevron-right"></i>
+                <span id="breadcrumb-current-tab" class="active">Overview</span>
+              </div>
+              <h2 id="view-title">Dashboard Overview</h2>
+              <p id="view-subtitle" class="text-secondary">Summary and trends across WellMindly students.</p>
+            </div>
           </div>
           <div class="header-actions">
             <div class="refresh-indicator">
@@ -139,66 +169,164 @@
           
           <!-- TAB: Overview -->
           <div id="tab-overview" class="tab-pane">
-            <!-- KPI Summary Cards -->
+            <!-- 1. Executive KPI Summary Cards -->
             <div class="kpi-grid">
+              <!-- Card 1: Total Students -->
               <div class="kpi-card glow-card">
-                <div class="kpi-icon icon-blue"><i class="bx bxs-group"></i></div>
+                <div class="kpi-card-header">
+                  <div class="kpi-icon icon-emerald"><i class="bx bxs-user-detail"></i></div>
+                  <span class="kpi-badge badge-growth"><i class="bx bx-trending-up"></i> +14%</span>
+                </div>
                 <div class="kpi-data">
-                  <h3>Total Students</h3>
+                  <h3>Registered Students</h3>
                   <p class="kpi-value" id="kpi-students">-</p>
-                  <p class="kpi-meta text-emerald"><i class="bx bx-trending-up"></i> Active directory</p>
+                  <p class="kpi-meta"><i class="bx bx-check-circle"></i> Active student directory</p>
                 </div>
               </div>
+
+              <!-- Card 2: Active Counselors -->
               <div class="kpi-card glow-card">
-                <div class="kpi-icon icon-plum"><i class="bx bxs-file-blank"></i></div>
+                <div class="kpi-card-header">
+                  <div class="kpi-icon icon-plum"><i class="bx bxs-user-badge"></i></div>
+                  <span class="kpi-badge badge-plum"><i class="bx bx-shield-quarter"></i> Staff</span>
+                </div>
                 <div class="kpi-data">
-                  <h3>Quiz Submissions</h3>
+                  <h3>Active Counselors</h3>
+                  <p class="kpi-value" id="kpi-counselors">-</p>
+                  <p class="kpi-meta"><i class="bx bx-certification"></i> Licensed clinical team</p>
+                </div>
+              </div>
+
+              <!-- Card 3: Total Screenings -->
+              <div class="kpi-card glow-card">
+                <div class="kpi-card-header">
+                  <div class="kpi-icon icon-teal"><i class="bx bxs-book-heart"></i></div>
+                  <span class="kpi-badge badge-teal"><i class="bx bx-pulse"></i> Screenings</span>
+                </div>
+                <div class="kpi-data">
+                  <h3>Total Assessments</h3>
                   <p class="kpi-value" id="kpi-submissions">-</p>
-                  <p class="kpi-meta text-secondary">All assessment types</p>
+                  <p class="kpi-meta"><i class="bx bx-data"></i> PHQ-9, GAD-7 & check-ins</p>
                 </div>
               </div>
-              <div class="kpi-card glow-card">
-                <div class="kpi-icon icon-green"><i class="bx bxs-smile"></i></div>
-                <div class="kpi-data">
-                  <h3>Avg Daily Mood</h3>
-                  <p class="kpi-value" id="kpi-mood">-</p>
-                  <p class="kpi-meta text-secondary">Ratings 1-5 scale</p>
+
+              <!-- Card 4: Crisis / High Distress Alerts -->
+              <div class="kpi-card glow-card border-critical-glow">
+                <div class="kpi-card-header">
+                  <div class="kpi-icon icon-critical"><i class="bx bxs-error-alt"></i></div>
+                  <span class="kpi-badge badge-critical pulse-badge"><i class="bx bx-error-circle"></i> Attention</span>
                 </div>
-              </div>
-              <div class="kpi-card glow-card border-critical">
-                <div class="kpi-icon icon-critical"><i class="bx bxs-error-alt"></i></div>
                 <div class="kpi-data">
                   <h3>Critical Alerts</h3>
                   <p class="kpi-value text-critical" id="kpi-critical">-</p>
-                  <p class="kpi-meta text-secondary" style="font-size: 10px; line-height: 1.2; margin-top: 4px;">Severe concern cases flagged</p>
+                  <p class="kpi-meta text-critical-subtle"><i class="bx bx-bell"></i> High-distress flags flagged</p>
                 </div>
               </div>
             </div>
 
-            <!-- Charts Section -->
-            <div class="dashboard-charts">
-              <div class="chart-container glass-card">
-                <h3>Submission Volume Over Time</h3>
-                <p class="chart-subtitle">Daily count of completed student self-reflections</p>
-                <div class="canvas-wrapper">
-                  <canvas id="chart-submissions"></canvas>
+            <!-- 2. Executive Analytics & Operational Feed Grid -->
+            <div class="overview-analytics-grid">
+              <!-- Left Analytics Column -->
+              <div class="analytics-main-col">
+                <!-- Submissions Velocity Line Chart -->
+                <div class="chart-container glass-card">
+                  <div class="chart-card-header">
+                    <div>
+                      <div class="flex-row gap-8 items-center">
+                        <span class="chart-tag-pill emerald">Telemetry</span>
+                        <h3>Assessment Submission Velocity</h3>
+                      </div>
+                      <p class="chart-subtitle">Daily count of completed student self-reflections & clinical screenings</p>
+                    </div>
+                    <div class="chart-header-stat">
+                      <span class="stat-label">Daily Avg</span>
+                      <span class="stat-value" id="stat-daily-avg">-</span>
+                    </div>
+                  </div>
+                  <div class="canvas-wrapper">
+                    <canvas id="chart-submissions"></canvas>
+                  </div>
                 </div>
-              </div>
-              <div class="chart-container glass-card">
-                <h3>Clinical Severity Distribution</h3>
-                <p class="chart-subtitle">Breakdown of student classifications (Wellbeing screenings)</p>
-                <div class="canvas-wrapper flex-center">
-                  <canvas id="chart-severity"></canvas>
-                </div>
-              </div>
-            </div>
 
-            <div class="dashboard-charts mt-24">
-              <div class="chart-container glass-card full-width">
-                <h3>Daily Check-in Mood Distribution</h3>
-                <p class="chart-subtitle">Frequency of emotional ratings (1=Struggling to 5=Excellent)</p>
-                <div class="canvas-wrapper">
-                  <canvas id="chart-moods"></canvas>
+                <!-- 28-Day Mood Trajectory Bar Chart -->
+                <div class="chart-container glass-card mt-20">
+                  <div class="chart-card-header">
+                    <div>
+                      <div class="flex-row gap-8 items-center">
+                        <span class="chart-tag-pill teal">Sentiment</span>
+                        <h3>Daily Emotional Check-in Distribution</h3>
+                      </div>
+                      <p class="chart-subtitle">Frequency of emotional ratings across all active student check-in logs</p>
+                    </div>
+                    <div class="chart-header-stat">
+                      <span class="stat-label">Avg Mood Score</span>
+                      <span class="stat-value text-emerald" id="kpi-mood">—</span>
+                    </div>
+                  </div>
+                  <div class="canvas-wrapper">
+                    <canvas id="chart-moods"></canvas>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Operational & Intelligence Column -->
+              <div class="analytics-side-col">
+                <!-- Clinical Severity Donut Chart -->
+                <div class="chart-container glass-card">
+                  <div class="chart-card-header">
+                    <div>
+                      <div class="flex-row gap-8 items-center">
+                        <span class="chart-tag-pill plum">Clinical Breakdown</span>
+                        <h3>Severity Distribution</h3>
+                      </div>
+                      <p class="chart-subtitle">Classifications across evaluated student screenings</p>
+                    </div>
+                  </div>
+                  <div class="canvas-wrapper flex-center donut-wrapper">
+                    <canvas id="chart-severity"></canvas>
+                  </div>
+                </div>
+
+                <!-- Immediate Attention & Urgent Activity Ticker -->
+                <div class="urgent-widget glass-card mt-20">
+                  <div class="widget-header">
+                    <div class="flex-row gap-8 items-center">
+                      <div class="urgent-pulse-indicator"></div>
+                      <h3 style="font-size: 15px; font-weight: 700; color: white;">Requires Attention</h3>
+                    </div>
+                    <span class="urgent-count-badge" id="urgent-pending-count">0 Action Items</span>
+                  </div>
+                  <p class="widget-subtitle">Real-time triage items, pending counselor applications & inquiries</p>
+                  
+                  <div class="urgent-items-list" id="urgent-activity-feed">
+                    <div class="urgent-empty-state">
+                      <i class="bx bx-check-double"></i>
+                      <p>All clear. No urgent crisis flags or pending applications.</p>
+                    </div>
+                  </div>
+
+                  <!-- Quick Action Admin Shortcuts -->
+                  <div class="quick-shortcuts-section">
+                    <p class="shortcuts-title">Quick Actions</p>
+                    <div class="shortcuts-grid">
+                      <button class="btn-shortcut" onclick="switchTab('students')">
+                        <i class="bx bxs-user-detail"></i>
+                        <span>Student Registry</span>
+                      </button>
+                      <button class="btn-shortcut" onclick="switchTab('counselors')">
+                        <i class="bx bxs-user-voice"></i>
+                        <span>Review Apps</span>
+                      </button>
+                      <button class="btn-shortcut" onclick="switchTab('master-calendar')">
+                        <i class="bx bxs-calendar-check"></i>
+                        <span>Master Calendar</span>
+                      </button>
+                      <button class="btn-shortcut" onclick="switchTab('moderation')">
+                        <i class="bx bxs-shield-quarter"></i>
+                        <span>Safety Moderation</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -206,20 +334,36 @@
 
           <!-- TAB: Students -->
           <div id="tab-students" class="tab-pane hidden">
+            <!-- Filter Suite -->
             <div class="filter-bar glass-card">
               <div class="search-box">
                 <i class="bx bx-search"></i>
-                <input type="text" id="search-student" placeholder="Search by name, email, or university..." />
+                <input type="text" id="search-student" placeholder="Search student name, email, or domain..." />
+              </div>
+              <div class="filter-group">
+                <select id="filter-student-university" class="form-select">
+                  <option value="">All Universities & Domains</option>
+                  <!-- Populated dynamically -->
+                </select>
+                <select id="filter-student-risk" class="form-select">
+                  <option value="">All Clinical Statuses</option>
+                  <option value="CRITICAL">Critical Attention (Severe)</option>
+                  <option value="ELEVATED">Elevated (Moderate)</option>
+                  <option value="STABLE">Stable / Active</option>
+                </select>
               </div>
             </div>
 
+            <!-- Students Data Table -->
             <div class="table-container glass-card">
               <table id="students-table" class="data-table">
                 <thead>
                   <tr>
-                    <th>Student Name</th>
+                    <th>Student</th>
                     <th>Email Address</th>
-                    <th>University Domain</th>
+                    <th>University / Domain</th>
+                    <th>Streak & Activity</th>
+                    <th>Clinical Risk Status</th>
                     <th>Joined Date</th>
                     <th class="text-right">Actions</th>
                   </tr>
@@ -327,39 +471,129 @@
             </div>
           </div>
 
-          <!-- TAB: Feedback -->
+          <!-- TAB: Feedback (Platform & Assessment Analytics) -->
           <div id="tab-feedback" class="tab-pane hidden">
+            <!-- Feedback KPI Strip -->
             <div class="kpi-grid">
               <div class="kpi-card glow-card">
                 <div class="kpi-icon icon-plum"><i class="bx bxs-star"></i></div>
                 <div class="kpi-data">
-                  <h3>Average Assessment Rating</h3>
+                  <h3>Average Rating</h3>
                   <p class="kpi-value" id="feedback-avg-rating">-</p>
                   <div class="star-rating-display" id="feedback-stars-display"></div>
                 </div>
               </div>
               <div class="kpi-card glow-card">
-                <div class="kpi-icon icon-green"><i class="bx bxs-message-dots"></i></div>
+                <div class="kpi-icon icon-teal"><i class="bx bxs-message-dots"></i></div>
                 <div class="kpi-data">
-                  <h3>Feedback Responses</h3>
-                  <p class="kpi-value" id="feedback-total-count">-</p>
-                  <p class="kpi-meta text-secondary">With text comments</p>
+                  <h3>Total Reviews</h3>
+                  <p class="kpi-value" id="feedback-total-count">0</p>
+                  <p class="kpi-meta text-secondary">Verified student responses</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card border-warning">
+                <div class="kpi-icon icon-warning"><i class="bx bx-trending-up"></i></div>
+                <div class="kpi-data">
+                  <h3>Net Promoter Score</h3>
+                  <p class="kpi-value text-amber" id="feedback-nps-score">+0</p>
+                  <p class="kpi-meta text-secondary">Promoters vs Detractors</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-green"><i class="bx bx-smile"></i></div>
+                <div class="kpi-data">
+                  <h3>Positive Sentiment</h3>
+                  <p class="kpi-value text-emerald" id="feedback-sentiment-rate">0%</p>
+                  <p class="kpi-meta text-secondary">4 & 5-Star satisfaction rate</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 5-Point Smiley Sentiment Distribution Card -->
+            <div class="glass-card mt-20" style="padding: 20px 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: white; display: flex; align-items: center; gap: 8px;">
+                  <i class="bx bx-bar-chart-alt-2 text-teal"></i>
+                  <span>5-Point Smiley Sentiment Distribution</span>
+                </h3>
+                <span class="text-secondary" style="font-size: 11.5px;">Live Emotional Response Breakdown</span>
+              </div>
+              <div id="sentiment-bars-container" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px;">
+                <!-- 5 Stars -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 12px; border-radius: 10px; text-align: center;">
+                  <div style="font-size: 24px; margin-bottom: 4px;">😄</div>
+                  <div style="font-size: 12px; font-weight: 700; color: #10b981;">5 Stars</div>
+                  <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 8px;">Very Satisfied</div>
+                  <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                    <div id="sentiment-bar-5" style="width: 0%; height: 100%; background: #10b981; transition: width 0.4s ease;"></div>
+                  </div>
+                  <div id="sentiment-count-5" style="font-size: 11px; font-weight: 700; color: white; margin-top: 6px;">0 (0%)</div>
+                </div>
+                <!-- 4 Stars -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 12px; border-radius: 10px; text-align: center;">
+                  <div style="font-size: 24px; margin-bottom: 4px;">🙂</div>
+                  <div style="font-size: 12px; font-weight: 700; color: #34d399;">4 Stars</div>
+                  <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 8px;">Satisfied</div>
+                  <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                    <div id="sentiment-bar-4" style="width: 0%; height: 100%; background: #34d399; transition: width 0.4s ease;"></div>
+                  </div>
+                  <div id="sentiment-count-4" style="font-size: 11px; font-weight: 700; color: white; margin-top: 6px;">0 (0%)</div>
+                </div>
+                <!-- 3 Stars -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 12px; border-radius: 10px; text-align: center;">
+                  <div style="font-size: 24px; margin-bottom: 4px;">😐</div>
+                  <div style="font-size: 12px; font-weight: 700; color: #fbbf24;">3 Stars</div>
+                  <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 8px;">Neutral</div>
+                  <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                    <div id="sentiment-bar-3" style="width: 0%; height: 100%; background: #fbbf24; transition: width 0.4s ease;"></div>
+                  </div>
+                  <div id="sentiment-count-3" style="font-size: 11px; font-weight: 700; color: white; margin-top: 6px;">0 (0%)</div>
+                </div>
+                <!-- 2 Stars -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 12px; border-radius: 10px; text-align: center;">
+                  <div style="font-size: 24px; margin-bottom: 4px;">🙁</div>
+                  <div style="font-size: 12px; font-weight: 700; color: #f97316;">2 Stars</div>
+                  <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 8px;">Dissatisfied</div>
+                  <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                    <div id="sentiment-bar-2" style="width: 0%; height: 100%; background: #f97316; transition: width 0.4s ease;"></div>
+                  </div>
+                  <div id="sentiment-count-2" style="font-size: 11px; font-weight: 700; color: white; margin-top: 6px;">0 (0%)</div>
+                </div>
+                <!-- 1 Star -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 12px; border-radius: 10px; text-align: center;">
+                  <div style="font-size: 24px; margin-bottom: 4px;">😡</div>
+                  <div style="font-size: 12px; font-weight: 700; color: #ef4444;">1 Star</div>
+                  <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 8px;">Very Dissatisfied</div>
+                  <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                    <div id="sentiment-bar-1" style="width: 0%; height: 100%; background: #ef4444; transition: width 0.4s ease;"></div>
+                  </div>
+                  <div id="sentiment-count-1" style="font-size: 11px; font-weight: 700; color: white; margin-top: 6px;">0 (0%)</div>
                 </div>
               </div>
             </div>
 
             <!-- Survey Filter Panel -->
-            <div class="filter-bar glass-card mt-24" style="display: flex; gap: 16px; flex-wrap: wrap;">
-              <div class="search-box" style="flex: 1; min-width: 280px;">
+            <div class="filter-bar glass-card mt-20" style="display: flex; gap: 14px; flex-wrap: wrap; align-items: center;">
+              <div class="search-box" style="flex: 1; min-width: 240px;">
                 <i class="bx bx-search"></i>
-                <input type="text" id="search-feedback" placeholder="Search comments text or email..." />
+                <input type="text" id="search-feedback" placeholder="Search comments text, email, or assessment..." />
               </div>
               
-              <div class="filter-dropdowns-group" style="display: flex; gap: 12px; margin-left: auto;">
+              <div class="filter-dropdowns-group" style="display: flex; gap: 10px; margin-left: auto; flex-wrap: wrap;">
                 <div class="select-wrapper">
-                  <label for="filter-would-use">Would use?</label>
-                  <select id="filter-would-use">
-                    <option value="">All Answers</option>
+                  <select id="filter-feedback-rating" class="form-select" style="padding: 8px 12px; font-size: 12px;">
+                    <option value="">All Star Ratings</option>
+                    <option value="5">5 Stars (😄 Very Satisfied)</option>
+                    <option value="4">4 Stars (🙂 Satisfied)</option>
+                    <option value="3">3 Stars (😐 Neutral)</option>
+                    <option value="2">2 Stars (🙁 Dissatisfied)</option>
+                    <option value="1">1 Star (😡 Very Dissatisfied)</option>
+                  </select>
+                </div>
+
+                <div class="select-wrapper">
+                  <select id="filter-would-use" class="form-select" style="padding: 8px 12px; font-size: 12px;">
+                    <option value="">All Intentions (Would use?)</option>
                     <option value="Yes, definitely">Yes, definitely</option>
                     <option value="Maybe">Maybe</option>
                     <option value="Probably not">Probably not</option>
@@ -367,9 +601,8 @@
                 </div>
 
                 <div class="select-wrapper">
-                  <label for="filter-reach-first">Reach first?</label>
-                  <select id="filter-reach-first">
-                    <option value="">All Options</option>
+                  <select id="filter-reach-first" class="form-select" style="padding: 8px 12px; font-size: 12px;">
+                    <option value="">All Preferences (Reach first?)</option>
                     <option value="Write on my own">Write on my own</option>
                     <option value="Talk with others">Talk with others</option>
                     <option value="Not sure">Not sure</option>
@@ -384,11 +617,11 @@
                 <thead>
                   <tr>
                     <th>Student Details</th>
-                    <th>Quiz Title</th>
-                    <th>Rating</th>
-                    <th>Would Use? (Q3)</th>
-                    <th>Reach First? (Q4)</th>
-                    <th>Comments Context</th>
+                    <th>Assessment Title</th>
+                    <th>Sentiment Rating</th>
+                    <th>Recommendation Intent</th>
+                    <th>Preferred Channel</th>
+                    <th>User Commentary & Context</th>
                     <th class="text-right">Actions</th>
                   </tr>
                 </thead>
@@ -405,10 +638,55 @@
 
           <!-- TAB: Universities (Onboarding Requests) -->
           <div id="tab-university" class="tab-pane hidden">
-            <div class="filter-bar glass-card">
-              <div class="search-box">
+            <!-- Institutional KPI Strip -->
+            <div class="kpi-grid" style="margin-bottom: 20px;">
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-teal"><i class="bx bx-buildings"></i></div>
+                <div class="kpi-data">
+                  <h3>Campus Requests</h3>
+                  <p class="kpi-value" id="kpi-uni-total">0</p>
+                  <p class="kpi-meta text-secondary">Inbound partnership inquiries</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card border-warning">
+                <div class="kpi-icon icon-warning"><i class="bx bx-calendar-event"></i></div>
+                <div class="kpi-data">
+                  <h3>Demos & Contacted</h3>
+                  <p class="kpi-value text-amber" id="kpi-uni-in-progress">0</p>
+                  <p class="kpi-meta text-secondary">Active discovery discussions</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-green"><i class="bx bx-check-shield"></i></div>
+                <div class="kpi-data">
+                  <h3>Partnered Campuses</h3>
+                  <p class="kpi-value text-emerald" id="kpi-uni-partnered">0</p>
+                  <p class="kpi-meta text-secondary">Live institutional integrations</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-plum"><i class="bx bx-user-pin"></i></div>
+                <div class="kpi-data">
+                  <h3>Key Personnel</h3>
+                  <p class="kpi-value" id="kpi-uni-leads">0</p>
+                  <p class="kpi-meta text-secondary">Deans & Wellness Directors</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="filter-bar glass-card" style="display: flex; gap: 14px; align-items: center;">
+              <div class="search-box" style="flex: 1;">
                 <i class="bx bx-search"></i>
-                <input type="text" id="search-university-contact" placeholder="Search requests by school, name, or role..." />
+                <input type="text" id="search-university-contact" placeholder="Search requests by school, personnel name, email, or role..." />
+              </div>
+              <div class="filter-group" style="margin: 0;">
+                <select id="filter-university-stage" class="form-select" style="padding: 10px 14px; font-size: 13px;">
+                  <option value="">All Partnership Stages</option>
+                  <option value="NEW">New Inquiries</option>
+                  <option value="CONTACTED">Contacted & Outreach Sent</option>
+                  <option value="DEMO_SCHEDULED">Demo / Presentation Scheduled</option>
+                  <option value="PARTNERED">Active Partner Campus</option>
+                </select>
               </div>
             </div>
 
@@ -416,13 +694,13 @@
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>University / College</th>
-                    <th>Contact Person</th>
-                    <th>Role / Title</th>
+                    <th>University / Institution</th>
+                    <th>Key Contact Person</th>
+                    <th>Official Role</th>
                     <th>Email Address</th>
-                    <th>Phone</th>
+                    <th>Partnership Stage</th>
                     <th>Date Received</th>
-                    <th class="text-right">Actions</th>
+                    <th class="text-right">Institutional Actions</th>
                   </tr>
                 </thead>
                 <tbody id="university-contact-list">
@@ -437,10 +715,54 @@
 
           <!-- TAB: Counsellors & Coaching (Onboarding Applications) -->
           <div id="tab-counselors" class="tab-pane hidden">
-            <div class="filter-bar glass-card">
-              <div class="search-box">
+            <!-- Applications KPI Strip -->
+            <div class="kpi-grid" style="margin-bottom: 20px;">
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-plum"><i class="bx bx-user-voice"></i></div>
+                <div class="kpi-data">
+                  <h3>Applications</h3>
+                  <p class="kpi-value" id="kpi-counselor-apps-total">0</p>
+                  <p class="kpi-meta text-secondary">Total onboarding submissions</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card border-warning">
+                <div class="kpi-icon icon-warning"><i class="bx bx-time-five"></i></div>
+                <div class="kpi-data">
+                  <h3>Pending Review</h3>
+                  <p class="kpi-value text-amber" id="kpi-counselor-apps-pending">0</p>
+                  <p class="kpi-meta text-secondary">Awaiting credential check</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-green"><i class="bx bx-badge-check"></i></div>
+                <div class="kpi-data">
+                  <h3>Verified Credentials</h3>
+                  <p class="kpi-value text-emerald" id="kpi-counselor-apps-verified">0</p>
+                  <p class="kpi-meta text-secondary">Licensed therapists & coaches</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-blue"><i class="bx bx-user-check"></i></div>
+                <div class="kpi-data">
+                  <h3>Active Staff</h3>
+                  <p class="kpi-value" id="kpi-counselor-apps-active">0</p>
+                  <p class="kpi-meta text-secondary">Provisioned in roster</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="filter-bar glass-card" style="display: flex; gap: 14px; align-items: center;">
+              <div class="search-box" style="flex: 1;">
                 <i class="bx bx-search"></i>
-                <input type="text" id="search-counselor-contact" placeholder="Search applicants by name, email, or credentials..." />
+                <input type="text" id="search-counselor-contact" placeholder="Search applicants by name, email, credentials, or licenses..." />
+              </div>
+              <div class="filter-group" style="margin: 0;">
+                <select id="filter-counselor-status" class="form-select" style="padding: 10px 14px; font-size: 13px;">
+                  <option value="">All Credential Categories</option>
+                  <option value="PSYCH">Clinical Psychologists</option>
+                  <option value="LCSW">LCSW / LMFT Licensed</option>
+                  <option value="COACH">Student Life Coaches</option>
+                </select>
               </div>
             </div>
 
@@ -448,12 +770,12 @@
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>Counselor Name</th>
+                    <th>Applicant Profile</th>
                     <th>Email Address</th>
                     <th>Phone</th>
-                    <th>Credentials & Licenses</th>
+                    <th>Credentials & Licensing</th>
                     <th>Date Applied</th>
-                    <th class="text-right">Actions</th>
+                    <th class="text-right">Dossier & Provisioning</th>
                   </tr>
                 </thead>
                 <tbody id="counselor-contact-list">
@@ -466,12 +788,56 @@
             </div>
           </div>
 
-          <!-- TAB: General Contacts -->
+          <!-- TAB: General Contacts (Inquiries Manager) -->
           <div id="tab-contacts" class="tab-pane hidden">
-            <div class="filter-bar glass-card">
-              <div class="search-box">
+            <!-- General Contacts KPI Strip -->
+            <div class="kpi-grid" style="margin-bottom: 20px;">
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-teal"><i class="bx bx-envelope"></i></div>
+                <div class="kpi-data">
+                  <h3>Total Inquiries</h3>
+                  <p class="kpi-value" id="kpi-contacts-total">0</p>
+                  <p class="kpi-meta text-secondary">Inbound visitor messages</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card border-warning">
+                <div class="kpi-icon icon-warning"><i class="bx bx-time-five"></i></div>
+                <div class="kpi-data">
+                  <h3>Pending Reply</h3>
+                  <p class="kpi-value text-amber" id="kpi-contacts-pending">0</p>
+                  <p class="kpi-meta text-secondary">Awaiting administrator response</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-green"><i class="bx bx-check-circle"></i></div>
+                <div class="kpi-data">
+                  <h3>Resolved Inquiries</h3>
+                  <p class="kpi-value text-emerald" id="kpi-contacts-resolved">0</p>
+                  <p class="kpi-meta text-secondary">Successfully addressed</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-plum"><i class="bx bx-support"></i></div>
+                <div class="kpi-data">
+                  <h3>General Topics</h3>
+                  <p class="kpi-value" id="kpi-contacts-topics">0</p>
+                  <p class="kpi-meta text-secondary">Support, partnership & queries</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="filter-bar glass-card" style="display: flex; gap: 14px; align-items: center;">
+              <div class="search-box" style="flex: 1;">
                 <i class="bx bx-search"></i>
-                <input type="text" id="search-general-contact" placeholder="Search inquiries by name, email, or subject..." />
+                <input type="text" id="search-general-contact" placeholder="Search inquiries by sender name, email, subject, or message content..." />
+              </div>
+              <div class="filter-group" style="margin: 0;">
+                <select id="filter-general-contact-status" class="form-select" style="padding: 10px 14px; font-size: 13px;">
+                  <option value="">All Inquiries</option>
+                  <option value="PENDING_REPLY">🟡 Pending Reply</option>
+                  <option value="RESOLVED">🟢 Resolved</option>
+                  <option value="ESCALATED">🔴 Escalated / Urgent</option>
+                </select>
               </div>
             </div>
 
@@ -479,9 +845,11 @@
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>Email Address</th>
-                    <th>Subject</th>
+                    <th>Sender Profile</th>
+                    <th>Official Email</th>
+                    <th>Subject Category</th>
+                    <th>Message Excerpt</th>
+                    <th>Status</th>
                     <th>Date Received</th>
                     <th class="text-right">Actions</th>
                   </tr>
@@ -535,12 +903,12 @@
             </div>
 
             <!-- Two Column Layout: Rooms Management & Flagged Queue -->
-            <div style="display: grid; grid-template-columns: 350px 1fr; gap: 20px; align-items: start;">
+            <div style="display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start;">
               
               <!-- Column Left: Rooms Manager -->
               <div class="section-card glass-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                  <h3 style="margin: 0;">TalkRooms</h3>
+                  <h3 style="margin: 0; font-size: 15px;">TalkRooms</h3>
                   <button class="btn-primary small" id="btn-open-create-room" style="font-size: 11px; padding: 6px 12px; height: auto;">+ New Room</button>
                 </div>
 
@@ -566,19 +934,31 @@
 
               <!-- Column Right: Flagged Moderation Queue -->
               <div class="section-card glass-card">
-                <h3>Flagged Content Queue</h3>
-                <p class="section-subtitle">Notes and replies muted or pending review</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                  <div>
+                    <h3 style="margin: 0; font-size: 15px;">Flagged Content Queue</h3>
+                    <p class="section-subtitle" style="margin: 0; font-size: 11px;">Live flagged messages, AI distress alerts & user reports</p>
+                  </div>
+                  <div class="filter-group" style="margin: 0;">
+                    <select id="filter-mod-reason" class="form-select" style="padding: 6px 10px; font-size: 11.5px;">
+                      <option value="">All Flag Types</option>
+                      <option value="CRISIS">AI Crisis Risk Matches</option>
+                      <option value="USER">User Reported Items</option>
+                      <option value="PENDING">Pending Review</option>
+                    </select>
+                  </div>
+                </div>
 
-                <div class="table-container mt-16">
+                <div class="table-container mt-12">
                   <table class="data-table small">
                     <thead>
                       <tr>
-                        <th style="width: 80px;">Type</th>
-                        <th>Room/Note</th>
+                        <th style="width: 75px;">Type</th>
+                        <th>Room / Topic</th>
                         <th>User (Nick)</th>
-                        <th>Content</th>
-                        <th>AI Moderation Reason</th>
-                        <th class="text-right" style="width: 140px;">Actions</th>
+                        <th>Flagged Message</th>
+                        <th>Flag Reason & Trigger</th>
+                        <th class="text-right" style="width: 220px;">Safety Actions</th>
                       </tr>
                     </thead>
                     <tbody id="flagged-content-list">
@@ -587,11 +967,43 @@
                   </table>
                   <div id="flagged-empty-state" class="text-center py-20 text-secondary hidden" style="padding: 40px 0; color: rgba(255,255,255,0.4);">
                     <i class="bx bx-check-circle" style="font-size: 32px; color: #10b981; margin-bottom: 8px; display: block;"></i>
-                    <span style="font-size: 12px; font-weight: 600;">Queue Clean! No flagged items found.</span>
+                    <span style="font-size: 12px; font-weight: 600;">Queue Clean! No unaddressed safety alerts.</span>
                   </div>
                 </div>
               </div>
 
+            </div>
+
+            <!-- Moderation Audit History Log Section -->
+            <div class="section-card glass-card mt-20" id="moderation-audit-log-section">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div>
+                  <h3 style="margin: 0; font-size: 14.5px;">
+                    <i class="bx bx-history text-teal" style="margin-right: 6px;"></i> Moderation Audit History Log
+                  </h3>
+                  <p class="section-subtitle" style="margin: 0; font-size: 11px;">Permanent compliance trail of resolved content interventions</p>
+                </div>
+                <button class="btn-secondary small" onclick="clearLocalAuditLog()" style="font-size: 11px;">
+                  <i class="bx bx-trash"></i> Reset Session Log
+                </button>
+              </div>
+
+              <div class="table-container mt-12">
+                <table class="data-table small">
+                  <thead>
+                    <tr>
+                      <th style="width: 80px;">Item Type</th>
+                      <th>Content Excerpt</th>
+                      <th>Moderator Action</th>
+                      <th>Resolution Note</th>
+                      <th>Resolved At</th>
+                    </tr>
+                  </thead>
+                  <tbody id="moderation-audit-log-body">
+                    <!-- Dynamic audit trail rows -->
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
@@ -656,35 +1068,218 @@
             </div>
           </div>
 
-          <!-- TAB: Master Calendar -->
+          <!-- TAB: Master Calendar (Appointments & Availability Dispatcher) -->
           <div id="tab-master-calendar" class="tab-pane hidden">
-            <div id="master-calendar-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px;">
-              <!-- Sessions rendered dynamically -->
+            <!-- Calendar KPI Strip -->
+            <div class="kpi-grid" style="margin-bottom: 20px;">
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-teal"><i class="bx bx-calendar-event"></i></div>
+                <div class="kpi-data">
+                  <h3>Total Bookings</h3>
+                  <p class="kpi-value" id="kpi-cal-total">0</p>
+                  <p class="kpi-meta text-secondary">All scheduled & past encounters</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card border-warning">
+                <div class="kpi-icon icon-warning"><i class="bx bx-time-five"></i></div>
+                <div class="kpi-data">
+                  <h3>Upcoming / Active</h3>
+                  <p class="kpi-value text-amber" id="kpi-cal-upcoming">0</p>
+                  <p class="kpi-meta text-secondary">Confirmed upcoming sessions</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-green"><i class="bx bx-check-circle"></i></div>
+                <div class="kpi-data">
+                  <h3>Completed Sessions</h3>
+                  <p class="kpi-value text-emerald" id="kpi-cal-completed">0</p>
+                  <p class="kpi-meta text-secondary">Successfully conducted</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-plum"><i class="bx bx-pie-chart-alt-2"></i></div>
+                <div class="kpi-data">
+                  <h3>Capacity Utilization</h3>
+                  <p class="kpi-value" id="kpi-cal-utilization">85%</p>
+                  <p class="kpi-meta text-secondary">Active clinical availability</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Counselor Weekly Time-Slot Availability Strip -->
+            <div class="glass-card mb-20" style="padding: 20px 24px; margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <div>
+                  <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: white; display: flex; align-items: center; gap: 8px;">
+                    <i class="bx bx-timer text-teal"></i>
+                    <span>Counselor Time-Slot Allocation & Live Capacity</span>
+                  </h3>
+                  <p class="section-subtitle" style="margin: 0; font-size: 11.5px;">Weekly clinical booking windows and counselor availability</p>
+                </div>
+                <button class="btn-secondary small" onclick="showToast('Refreshing counselor live availability status...', 'info')" style="font-size: 11px;">
+                  <i class="bx bx-refresh"></i> Refresh Slots
+                </button>
+              </div>
+              <div id="counselor-slots-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px;">
+                <!-- Dynamically rendered counselor slot utilization cards -->
+              </div>
+            </div>
+
+            <!-- Filter & Search Controls Bar -->
+            <div class="filter-bar glass-card" style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 20px;">
+              <div class="search-box" style="flex: 1; min-width: 260px;">
+                <i class="bx bx-search"></i>
+                <input type="text" id="search-master-calendar" placeholder="Search sessions by student, counselor, or topic..." />
+              </div>
+              <div class="filter-group" style="margin: 0;">
+                <select id="filter-calendar-status" class="form-select" style="padding: 10px 14px; font-size: 13px;">
+                  <option value="">All Session Statuses</option>
+                  <option value="CONFIRMED">🟢 Confirmed / Upcoming</option>
+                  <option value="IN_PROGRESS">🔵 In Progress (Live Video)</option>
+                  <option value="COMPLETED">🟣 Completed</option>
+                  <option value="CANCELLED_BY_STUDENT">🟠 Cancelled by Student</option>
+                  <option value="CANCELLED_BY_COUNSELOR">🔴 Cancelled / Admin Override</option>
+                </select>
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn-primary small" id="btn-calendar-view-cards" onclick="switchCalendarLayout('cards')" style="padding: 8px 12px; font-size: 11px;">
+                  <i class="bx bx-grid-alt"></i> Cards
+                </button>
+                <button type="button" class="btn-secondary small" id="btn-calendar-view-table" onclick="switchCalendarLayout('table')" style="padding: 8px 12px; font-size: 11px;">
+                  <i class="bx bx-list-ul"></i> Table
+                </button>
+              </div>
+            </div>
+
+            <!-- Layout 1: Grid Cards View -->
+            <div id="master-calendar-cards-view">
+              <div id="master-calendar-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px;">
+                <!-- Sessions rendered dynamically -->
+              </div>
+            </div>
+
+            <!-- Layout 2: Data Table View (Hidden by default) -->
+            <div id="master-calendar-table-view" class="table-container glass-card hidden">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Student Details</th>
+                    <th>Assigned Counselor</th>
+                    <th>Scheduled Date & Time</th>
+                    <th>Status</th>
+                    <th>Jitsi Video Room</th>
+                    <th class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="master-calendar-table-body">
+                  <!-- Dynamically rendered rows -->
+                </tbody>
+              </table>
+            </div>
+
+            <div id="calendar-empty-state" class="text-center py-20 text-secondary hidden" style="padding: 40px 0; color: rgba(255,255,255,0.4);">
+              <i class="bx bx-calendar-x" style="font-size: 32px; color: hsl(var(--primary-teal)); margin-bottom: 8px; display: block;"></i>
+              <span style="font-size: 13px; font-weight: 600;">No clinical sessions matching filter criteria.</span>
             </div>
           </div>
 
-          <!-- TAB: Dual Feedback Analytics -->
+          <!-- TAB: Dual Feedback Analytics & Clinical Matrix -->
           <div id="tab-dual-feedback" class="tab-pane hidden">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-              <!-- Student to Counselor Feedback -->
-              <div class="glass-card">
-                <h3 style="font-size: 16px; font-weight: 700; color: white; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-                  <i class="bx bx-star" style="color: hsl(var(--color-amber));"></i>
-                  <span>Student → Counselor Ratings</span>
-                </h3>
-                <p class="section-subtitle">Reviews submitted by students post-session</p>
-                <div id="student-to-counselor-feedback-list" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
-                  <!-- Dynamically loaded -->
+            <!-- Dual Feedback KPI Strip -->
+            <div class="kpi-grid" style="margin-bottom: 20px;">
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-plum"><i class="bx bx-star"></i></div>
+                <div class="kpi-data">
+                  <h3>Clinical Rating</h3>
+                  <p class="kpi-value" id="kpi-dual-avg-rating">5.0</p>
+                  <p class="kpi-meta text-secondary">Student rating of counselors</p>
                 </div>
               </div>
-
-              <!-- Counselor to Student Feedback -->
-              <div class="section-card glass-card">
-                <h3>Counselor → Student Evaluations</h3>
-                <p class="section-subtitle">Clinical engagement evaluations submitted by counselors</p>
-                <div id="counselor-to-student-feedback-list" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
-                  <!-- Dynamically loaded -->
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-teal"><i class="bx bx-user-voice"></i></div>
+                <div class="kpi-data">
+                  <h3>Student Reviews</h3>
+                  <p class="kpi-value" id="kpi-dual-student-reviews">0</p>
+                  <p class="kpi-meta text-secondary">Counselor session reviews</p>
                 </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-green"><i class="bx bx-clipboard"></i></div>
+                <div class="kpi-data">
+                  <h3>Clinical Evaluations</h3>
+                  <p class="kpi-value text-emerald" id="kpi-dual-counselor-evals">0</p>
+                  <p class="kpi-meta text-secondary">Counselor-logged session notes</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card border-warning">
+                <div class="kpi-icon icon-warning"><i class="bx bx-flag"></i></div>
+                <div class="kpi-data">
+                  <h3>Follow-ups Flagged</h3>
+                  <p class="kpi-value text-amber" id="kpi-dual-followups">0</p>
+                  <p class="kpi-meta text-secondary">Further support recommended</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dual Matrix View Switcher -->
+            <div class="filter-bar glass-card" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn-primary" id="btn-dual-view-student" onclick="switchDualFeedbackView('student')" style="font-size: 12.5px; padding: 8px 16px; display: flex; align-items: center; gap: 6px;">
+                  <i class="bx bx-user-check"></i>
+                  <span>Student → Counselor Reviews</span>
+                </button>
+                <button type="button" class="btn-secondary" id="btn-dual-view-counselor" onclick="switchDualFeedbackView('counselor')" style="font-size: 12.5px; padding: 8px 16px; display: flex; align-items: center; gap: 6px;">
+                  <i class="bx bx-plus-medical"></i>
+                  <span>Counselor → Student Clinical Evaluations</span>
+                </button>
+              </div>
+              <div class="search-box" style="width: 320px;">
+                <i class="bx bx-search"></i>
+                <input type="text" id="search-dual-feedback" placeholder="Search sessions by student, counselor, or notes..." />
+              </div>
+            </div>
+
+            <!-- Panel 1: Student -> Counselor Reviews -->
+            <div id="panel-dual-student" class="table-container glass-card">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Counselor Profile</th>
+                    <th>Rating & Stars</th>
+                    <th>Comments & Feedback</th>
+                    <th>Session Date</th>
+                    <th class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="student-to-counselor-table-body">
+                  <!-- Dynamically loaded rows -->
+                </tbody>
+              </table>
+              <div id="dual-student-empty" class="text-center py-20 text-secondary hidden" style="padding: 36px 0; color: rgba(255,255,255,0.4);">
+                No student session reviews recorded yet.
+              </div>
+            </div>
+
+            <!-- Panel 2: Counselor -> Student Evaluations (Hidden by default) -->
+            <div id="panel-dual-counselor" class="table-container glass-card hidden">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Counselor</th>
+                    <th>Student Dossier</th>
+                    <th>Clinical Score</th>
+                    <th>Clinical Summary & Progress Notes</th>
+                    <th>Session Date</th>
+                    <th class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="counselor-to-student-table-body">
+                  <!-- Dynamically loaded rows -->
+                </tbody>
+              </table>
+              <div id="dual-counselor-empty" class="text-center py-20 text-secondary hidden" style="padding: 36px 0; color: rgba(255,255,255,0.4);">
+                No clinical session evaluations recorded yet.
               </div>
             </div>
           </div>
@@ -693,51 +1288,116 @@
       </main>
     </div>
 
-    <!-- 3. Modals -->
-    <!-- Modal: Student Profile Details -->
+    <!-- Modal: Student Clinical Dossier -->
     <div id="modal-student" class="modal-wrapper hidden">
-      <div class="modal-card width-xl">
+      <div class="modal-card width-xl" id="student-dossier-printable">
         <div class="modal-header">
           <div class="student-profile-header">
             <div class="profile-avatar" id="modal-avatar">SD</div>
-            <div>
-              <h2 id="modal-student-name">Student Details</h2>
-              <p id="modal-student-email" class="text-secondary"></p>
+            <div class="student-profile-titles">
+              <div class="flex-row gap-8 items-center">
+                <h2 id="modal-student-name">Student Dossier</h2>
+                <span class="dossier-uni-badge" id="modal-student-uni">University</span>
+                <span class="dossier-risk-badge stable" id="modal-student-risk-badge">Stable</span>
+              </div>
+              <p id="modal-student-email" class="text-secondary" style="font-size: 12.5px;"></p>
             </div>
           </div>
-          <button class="btn-close-modal" onclick="closeStudentModal()"><i class="bx bx-x"></i></button>
+          <div class="flex-row gap-8 items-center">
+            <button type="button" class="btn-secondary small" id="btn-export-dossier" onclick="exportStudentDossier()">
+              <i class="bx bx-printer"></i>
+              <span>Export Dossier</span>
+            </button>
+            <button class="btn-close-modal" onclick="closeStudentModal()"><i class="bx bx-x"></i></button>
+          </div>
         </div>
-        <div class="modal-body scrollable">
-          <div class="modal-grid-layout full-width">
+        
+        <div class="modal-body scrollable" style="padding: 24px;">
+          <!-- 1. Clinical & Engagement Quick Summary Strip -->
+          <div class="dossier-metrics-strip">
+            <div class="dossier-stat-box">
+              <span class="dossier-stat-label"><i class="bx bx-flame text-amber"></i> Check-in Streak</span>
+              <strong class="dossier-stat-val" id="modal-stat-streak">0 Days</strong>
+            </div>
+            <div class="dossier-stat-box">
+              <span class="dossier-stat-label"><i class="bx bx-book-heart text-teal"></i> Screenings Taken</span>
+              <strong class="dossier-stat-val" id="modal-stat-tests">0 Tests</strong>
+            </div>
+            <div class="dossier-stat-box">
+              <span class="dossier-stat-label"><i class="bx bx-smile text-emerald"></i> Avg Mood Index</span>
+              <strong class="dossier-stat-val text-emerald" id="modal-stat-avgmood">- / 5.0</strong>
+            </div>
+            <div class="dossier-stat-box">
+              <span class="dossier-stat-label"><i class="bx bx-shield-quarter text-plum"></i> Clinical Status</span>
+              <strong class="dossier-stat-val" id="modal-stat-tier">Standard</strong>
+            </div>
+          </div>
+
+          <!-- 2. Main 2-Column Clinical Dossier Grid -->
+          <div class="modal-grid-layout full-width mt-20">
             
-            <!-- Left Card: Profile & Timeline Charts -->
+            <!-- Left Column: Academic Metadata & Longitudinal Mood Trajectory -->
             <div class="grid-left-col">
+              <!-- Academic & Contact Metadata -->
               <div class="section-card glass-card">
-                <h3>Daily Mood Check-ins</h3>
-                <p class="section-subtitle">Student mood rating timeline</p>
-                <div class="canvas-wrapper h-200">
+                <h4 style="font-size: 13.5px; font-weight: 700; color: white; margin-bottom: 12px;">
+                  <i class="bx bxs-id-card text-emerald" style="margin-right: 6px;"></i> Academic Profile & Affiliation
+                </h4>
+                <div class="dossier-info-grid" id="student-dossier-academic">
+                  <div class="info-row">
+                    <span class="info-label">University / Institution</span>
+                    <strong class="info-val" id="dossier-uni-name">-</strong>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Domain Verification</span>
+                    <span class="info-val" id="dossier-uni-domain">-</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Account Joined</span>
+                    <span class="info-val" id="dossier-joined-date">-</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Counselor Assigned</span>
+                    <span class="info-val" id="dossier-assigned-counselor">None (Self-guided)</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Longitudinal Mood Check-in Trajectory -->
+              <div class="section-card glass-card mt-16">
+                <div class="flex-row justify-between items-center mb-8">
+                  <div>
+                    <h4 style="font-size: 13.5px; font-weight: 700; color: white;">
+                      <i class="bx bx-trending-up text-teal" style="margin-right: 6px;"></i> Longitudinal Mood Trajectory
+                    </h4>
+                    <p class="section-subtitle" style="margin: 0; font-size: 11px;">Emotional check-in score progression</p>
+                  </div>
+                </div>
+                <div class="canvas-wrapper" style="height: 180px;">
                   <canvas id="student-mood-line-chart"></canvas>
                 </div>
               </div>
             </div>
 
-            <!-- Right Card: Reflection assessment history -->
+            <!-- Right Column: Reflection Assessment History -->
             <div class="grid-right-col">
               <div class="section-card glass-card h-full flex flex-col">
-                <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 12px;">
                   <div>
-                    <h3>Quiz Reflection History</h3>
-                    <p class="section-subtitle">Completed screening results</p>
+                    <h4 style="font-size: 13.5px; font-weight: 700; color: white;">
+                      <i class="bx bxs-book-heart text-plum" style="margin-right: 6px;"></i> Screening & Diagnostic History
+                    </h4>
+                    <p class="section-subtitle" style="margin: 0; font-size: 11px;">Completed diagnostic screenings & evaluations</p>
                   </div>
                   <!-- Search timeline -->
                   <div class="search-box small">
                     <i class="bx bx-search"></i>
-                    <input type="text" id="search-student-history" placeholder="Filter history..." />
+                    <input type="text" id="search-student-history" placeholder="Filter tests..." />
                   </div>
                 </div>
 
-                <div class="timeline-quiz-list mt-12" id="student-quizzes-list">
-                  <!-- Timeline quiz completions -->
+                <div class="timeline-quiz-list" id="student-quizzes-list">
+                  <!-- Timeline quiz completions rendered dynamically -->
                 </div>
                 
                 <div class="table-pagination" id="student-history-pagination" style="padding-top:12px; margin-top:auto;">
@@ -860,6 +1520,80 @@
       </div>
     </div>
 
+    <!-- Modal: Appointment Detail & Meeting Link Inspector -->
+    <div id="modal-appointment-detail" class="modal-wrapper hidden">
+      <div class="modal-card width-md">
+        <div class="modal-header">
+          <div>
+            <h2 id="app-modal-title">Clinical Encounter Details</h2>
+            <p class="text-secondary" id="app-modal-subtitle">Master Calendar appointment & live video link inspector</p>
+          </div>
+          <button class="btn-close-modal" onclick="closeAppointmentModal()"><i class="bx bx-x"></i></button>
+        </div>
+        <div class="modal-body" style="padding: 24px;">
+          <!-- Key participants -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 10px;">
+              <span style="font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; display: block; margin-bottom: 6px;">Student</span>
+              <strong style="color: white; font-size: 14px; display: block;" id="app-modal-student-name">-</strong>
+              <span style="font-size: 12px; color: rgba(255,255,255,0.5);" id="app-modal-student-email">-</span>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 10px;">
+              <span style="font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; display: block; margin-bottom: 6px;">Counselor</span>
+              <strong style="color: white; font-size: 14px; display: block;" id="app-modal-counselor-name">-</strong>
+              <span style="font-size: 12px; color: rgba(255,255,255,0.5);" id="app-modal-counselor-email">-</span>
+            </div>
+          </div>
+
+          <!-- Time & Status Details -->
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 12px 16px; border-radius: 8px; margin-bottom: 20px;">
+            <div>
+              <div style="font-size: 11px; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: 700;">Scheduled Date & Time</div>
+              <div style="font-size: 13px; font-weight: 600; color: white; margin-top: 2px;" id="app-modal-datetime">-</div>
+            </div>
+            <div id="app-modal-status-badge">
+              <!-- Dynamic Status badge -->
+            </div>
+          </div>
+
+          <!-- Video Room Link Box -->
+          <div style="background: linear-gradient(135deg, rgba(5, 149, 157, 0.1), rgba(122, 91, 147, 0.1)); border: 1px solid rgba(5, 149, 157, 0.3); padding: 16px; border-radius: 10px; margin-bottom: 20px;">
+            <label style="font-size: 11px; font-weight: 700; color: hsl(var(--primary-teal)); text-transform: uppercase; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+              <i class="bx bx-video"></i> Jitsi Encrypted Telehealth Video Room
+            </label>
+            <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+              <input type="text" id="app-modal-video-link" readonly style="flex: 1; font-size: 12px; padding: 8px 12px; border-radius: 6px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); color: white;" />
+              <button id="btn-copy-video-link" class="btn-secondary small" style="font-size: 11px; padding: 6px 12px;">Copy</button>
+            </div>
+            <a id="btn-join-video-room" href="#" target="_blank" class="btn-primary" style="display: inline-flex; align-items: center; justify-content: center; width: 100%; text-decoration: none; font-size: 13px; padding: 10px;">
+              <i class="bx bx-video-plus" style="margin-right: 6px;"></i> Join Telehealth Room as Supervisor
+            </a>
+          </div>
+
+          <!-- Session Topic / Notes -->
+          <div style="margin-bottom: 20px;">
+            <label style="font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; display: block; margin-bottom: 6px;">Intake Notes & Focus Topic</label>
+            <div id="app-modal-notes" style="font-size: 12.5px; color: #cbd5e1; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 12px; border-radius: 8px; line-height: 1.5;">
+              Standard bi-weekly clinical consultation session.
+            </div>
+          </div>
+
+          <!-- Admin Override Controls -->
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 16px;">
+            <button class="btn-secondary" id="btn-modal-cancel-session" style="background: rgba(220, 38, 38, 0.15); border-color: rgba(220, 38, 38, 0.3); color: #f87171; font-size: 12px; padding: 8px 14px;">
+              <i class="bx bx-x-circle"></i> Cancel Session
+            </button>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn-secondary" id="btn-modal-reschedule-session" style="font-size: 12px; padding: 8px 14px;">
+                <i class="bx bx-calendar-edit"></i> Reschedule
+              </button>
+              <button class="btn-primary" onclick="closeAppointmentModal()" style="font-size: 12px; padding: 8px 16px;">Done</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal: Reschedule Master Calendar Session -->
     <div id="modal-reschedule-session" class="modal-wrapper hidden">
       <div class="modal-card width-md">
@@ -918,6 +1652,23 @@
           </div>
           <div style="display: flex; justify-content: flex-end;">
             <button class="btn-primary" onclick="closeCustomAlertModal()">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Modern Logout Confirmation Modal -->
+    <div id="modal-logout-confirm" class="modal-wrapper hidden" style="z-index: 9999;">
+      <div class="modal-card width-sm" style="max-width: 400px; text-align: center;">
+        <div class="modal-body" style="padding: 32px 28px;">
+          <div style="width: 56px; height: 56px; border-radius: 18px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.25); color: #EF4444; font-size: 28px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
+            <i class="bx bx-log-out"></i>
+          </div>
+          <h3 style="font-size: 19px; font-weight: 800; color: white; margin-bottom: 8px;">Sign Out of Portal?</h3>
+          <p style="font-size: 13px; color: #94A3B8; line-height: 1.5; margin-bottom: 24px;">You will need your administrator credentials to access the clinical command center again.</p>
+          <div style="display: flex; gap: 12px; justify-content: center;">
+            <button type="button" class="btn-secondary" id="btn-cancel-logout" style="flex: 1; justify-content: center;">Cancel</button>
+            <button type="button" class="btn-primary" id="btn-confirm-logout" style="flex: 1; justify-content: center; background: linear-gradient(135deg, #DC2626, #B91C1C); border-color: rgba(239,68,68,0.4);">Sign Out</button>
           </div>
         </div>
       </div>
