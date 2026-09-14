@@ -3964,62 +3964,30 @@ window.uploadCounselorAvatar = async function(fileInput, targetInputId, previewI
 
 async function fetchAdminMasterCalendar() {
   try {
-    const res = await apiFetch('/v1/admin/sessions');
-    if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+    let res = await apiFetch('/v1/admin/calendar');
+    if (!res || !res.data) {
+      res = await apiFetch('/v1/admin/sessions');
+    }
+    if (res && res.data && Array.isArray(res.data)) {
       state.masterCalendarSessions = res.data;
     } else {
-      // High-fidelity clinical schedule fallback demo data
-      const now = new Date();
-      state.masterCalendarSessions = [
-        {
-          id: 'sess-001',
-          startTime: new Date(now.getTime() + 1000 * 60 * 45).toISOString(),
-          endTime: new Date(now.getTime() + 1000 * 60 * 95).toISOString(),
-          status: 'CONFIRMED',
-          cancellationReason: null,
-          student: { id: 'std-1', firstName: 'Alex', lastName: 'Mercer', email: 'alex.mercer@cambridge.edu' },
-          counselor: { id: 'coun-1', user: { firstName: 'Sarah', lastName: 'Jenkins', email: 's.jenkins@wellmindly.com' } }
-        },
-        {
-          id: 'sess-002',
-          startTime: new Date(now.getTime() - 1000 * 60 * 15).toISOString(),
-          endTime: new Date(now.getTime() + 1000 * 60 * 35).toISOString(),
-          status: 'IN_PROGRESS',
-          cancellationReason: null,
-          student: { id: 'std-2', firstName: 'Emma', lastName: 'Watson', email: 'emma.w@oxford.ac.uk' },
-          counselor: { id: 'coun-2', user: { firstName: 'Michael', lastName: 'Chen', email: 'm.chen@wellmindly.com' } }
-        },
-        {
-          id: 'sess-003',
-          startTime: new Date(now.getTime() - 1000 * 60 * 60 * 24).toISOString(),
-          endTime: new Date(now.getTime() - 1000 * 60 * 60 * 23).toISOString(),
-          status: 'COMPLETED',
-          cancellationReason: null,
-          student: { id: 'std-3', firstName: 'David', lastName: 'Kim', email: 'dkim@stanford.edu' },
-          counselor: { id: 'coun-3', user: { firstName: 'Elena', lastName: 'Rostova', email: 'e.rostova@wellmindly.com' } }
-        },
-        {
-          id: 'sess-004',
-          startTime: new Date(now.getTime() + 1000 * 60 * 60 * 26).toISOString(),
-          endTime: new Date(now.getTime() + 1000 * 60 * 60 * 27).toISOString(),
-          status: 'CONFIRMED',
-          cancellationReason: null,
-          student: { id: 'std-4', firstName: 'Sophia', lastName: 'Martinez', email: 'smartinez@harvard.edu' },
-          counselor: { id: 'coun-1', user: { firstName: 'Sarah', lastName: 'Jenkins', email: 's.jenkins@wellmindly.com' } }
-        },
-        {
-          id: 'sess-005',
-          startTime: new Date(now.getTime() - 1000 * 60 * 60 * 48).toISOString(),
-          endTime: new Date(now.getTime() - 1000 * 60 * 60 * 47).toISOString(),
-          status: 'CANCELLED_BY_STUDENT',
-          cancellationReason: 'Academic conflict with midterm exam schedule.',
-          student: { id: 'std-5', firstName: 'Liam', lastName: 'Davis', email: 'liam.d@mit.edu' },
-          counselor: { id: 'coun-2', user: { firstName: 'Michael', lastName: 'Chen', email: 'm.chen@wellmindly.com' } }
-        }
-      ];
+      state.masterCalendarSessions = [];
     }
   } catch (err) {
-    console.warn('Could not fetch sessions from server, using fallback records:', err);
+    console.warn('Could not fetch sessions from server:', err);
+    state.masterCalendarSessions = [];
+  }
+
+  // Ensure counselors are available for availability grid and reschedule dropdown
+  if (!state.counselors || state.counselors.length === 0) {
+    try {
+      const counsRes = await apiFetch('/v1/admin/counselors');
+      if (counsRes && counsRes.data) {
+        state.counselors = counsRes.data;
+      }
+    } catch (e) {
+      console.warn('Could not fetch counselors for calendar:', e);
+    }
   }
 
   renderMasterCalendar();
@@ -4052,14 +4020,62 @@ function renderCounselorAvailabilitySlots() {
   const container = document.getElementById('counselor-slots-grid');
   if (!container) return;
 
-  const counselors = [
-    { name: 'Dr. Sarah Jenkins', role: 'Clinical Psychologist', special: 'CBT & Academic Stress', booked: 18, total: 20, color: 'hsl(var(--primary-plum))' },
-    { name: 'Dr. Michael Chen', role: 'Licensed Counselor', special: 'Mindfulness & Sleep Hygiene', booked: 14, total: 16, color: 'hsl(var(--primary-teal))' },
-    { name: 'Dr. Elena Rostova', role: 'Psychiatric Specialist', special: 'Trauma & Depression', booked: 12, total: 15, color: '#2563eb' }
-  ];
+  const sessions = state.masterCalendarSessions || [];
+  let counselors = [];
+  const colors = ['hsl(var(--primary-plum))', 'hsl(var(--primary-teal))', '#2563eb', '#10b981', '#f59e0b'];
+
+  if (state.counselors && state.counselors.length > 0) {
+    counselors = state.counselors.map((c, i) => {
+      const booked = sessions.filter(s => (s.counselorId === c.id || s.counselor?.id === c.id) && s.status !== 'CANCELLED_BY_STUDENT' && s.status !== 'CANCELLED_BY_COUNSELOR').length;
+      const total = 20;
+      const u = c.user;
+      const name = u ? `Dr. ${u.firstName || ''} ${u.lastName || ''}`.trim() : 'Counselor';
+      return {
+        name,
+        role: c.credentials || 'Clinical Counselor',
+        special: c.specializations?.join(' & ') || (u?.email || 'Student Wellness'),
+        booked,
+        total,
+        color: colors[i % colors.length]
+      };
+    });
+  } else {
+    // Derive active counselors from session records
+    const cMap = new Map();
+    sessions.forEach((s, i) => {
+      if (s.counselor) {
+        const cId = s.counselor.id || s.counselorId || ('c-' + i);
+        if (!cMap.has(cId)) {
+          const u = s.counselor.user;
+          const name = u ? `Dr. ${u.firstName || ''} ${u.lastName || ''}`.trim() : 'Assigned Counselor';
+          cMap.set(cId, {
+            name,
+            role: 'Clinical Counselor',
+            special: u?.email || 'Counseling Services',
+            booked: 0,
+            total: 20,
+            color: colors[cMap.size % colors.length]
+          });
+        }
+        if (s.status !== 'CANCELLED_BY_STUDENT' && s.status !== 'CANCELLED_BY_COUNSELOR') {
+          cMap.get(cId).booked++;
+        }
+      }
+    });
+    counselors = Array.from(cMap.values());
+  }
+
+  if (counselors.length === 0) {
+    container.innerHTML = `
+      <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 14px; border-radius: 10px; grid-column: 1 / -1; text-align: center; color: rgba(255,255,255,0.4); font-size: 12px;">
+        No active counselors registered yet.
+      </div>
+    `;
+    return;
+  }
 
   container.innerHTML = counselors.map(c => {
-    const initials = c.name.replace('Dr. ', '').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+    const initials = (c.name.replace(/^Dr\.\s*/i, '').trim().split(/\s+/).map(n => n[0]).join('').slice(0, 2) || 'DR').toUpperCase();
     const pct = Math.round((c.booked / c.total) * 100);
     const isNearFull = pct >= 85;
 
@@ -4071,8 +4087,8 @@ function renderCounselorAvailabilitySlots() {
               ${initials}
             </div>
             <div>
-              <strong style="color: white; font-size: 12.5px; display: block;">${c.name}</strong>
-              <span style="font-size: 10.5px; color: rgba(255,255,255,0.4);">${c.special}</span>
+              <strong style="color: white; font-size: 12.5px; display: block;">${escapeHtml(c.name)}</strong>
+              <span style="font-size: 10.5px; color: rgba(255,255,255,0.4);">${escapeHtml(c.special)}</span>
             </div>
           </div>
           <span style="font-size: 10px; font-weight: 700; color: ${isNearFull ? '#fbbf24' : '#10b981'}; background: ${isNearFull ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)'}; padding: 2px 6px; border-radius: 4px;">
@@ -4108,15 +4124,18 @@ function renderMasterCalendar() {
   if (kpiTotal) kpiTotal.textContent = sessions.length;
   if (kpiUpcoming) kpiUpcoming.textContent = upcomingCount;
   if (kpiCompleted) kpiCompleted.textContent = completedCount;
-  if (kpiUtilization) kpiUtilization.textContent = '86%';
+  const totalCapacity = Math.max(1, (state.counselors?.length || 1) * 20);
+  const activeSessions = sessions.filter(s => s.status !== 'CANCELLED_BY_STUDENT' && s.status !== 'CANCELLED_BY_COUNSELOR').length;
+  if (kpiUtilization) kpiUtilization.textContent = `${Math.min(100, Math.round((activeSessions / totalCapacity) * 100))}%`;
 
   const q = (searchState.masterCalendar || '').toLowerCase().trim();
   const fStatus = filterState.masterCalendar.status;
 
   const filtered = sessions.filter(s => {
-    const studentName = s.student ? `${s.student.firstName} ${s.student.lastName}`.toLowerCase() : '';
+    const studentName = s.student ? `${s.student.firstName || ''} ${s.student.lastName || ''}`.toLowerCase() : '';
     const studentEmail = s.student?.email?.toLowerCase() || '';
-    const counselorName = s.counselor?.user ? `${s.counselor.user.firstName} ${s.counselor.user.lastName}`.toLowerCase() : '';
+    const counselorUser = s.counselor?.user;
+    const counselorName = counselorUser ? `${counselorUser.firstName || ''} ${counselorUser.lastName || ''}`.toLowerCase() : '';
     
     const matchesSearch = !q || studentName.includes(q) || studentEmail.includes(q) || counselorName.includes(q);
     if (!matchesSearch) return false;
@@ -4137,12 +4156,13 @@ function renderMasterCalendar() {
   if (cardsContainer) {
     cardsContainer.innerHTML = '';
     filtered.forEach(s => {
-      const studentName = s.student ? `${s.student.firstName} ${s.student.lastName}` : 'Anonymous Student';
+      const studentName = s.student ? `${s.student.firstName || ''} ${s.student.lastName || ''}`.trim() : 'Anonymous Student';
       const studentEmail = s.student?.email || 'N/A';
-      const studentInitials = studentName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+      const studentInitials = (studentName.replace(/[^a-zA-Z0-9 ]/g, '').trim().split(/\s+/).map(n => n[0]).join('').slice(0, 2) || 'ST').toUpperCase();
 
-      const counselorName = s.counselor?.user ? `Dr. ${s.counselor.user.firstName} ${s.counselor.user.lastName}` : 'Dr. Sarah Jenkins';
-      const roomLink = `https://meet.jit.si/wellmindly-counseling-${s.id.slice(0, 8)}`;
+      const counselorUser = s.counselor?.user;
+      const counselorName = counselorUser ? `Dr. ${counselorUser.firstName || ''} ${counselorUser.lastName || ''}`.trim() : (s.counselor?.name || 'Assigned Counselor');
+      const roomLink = s.meetingLink || `https://meet.jit.si/wellmindly-counseling-${(s.id || '').slice(0, 8)}`;
 
       let statusBadge = '';
       if (s.status === 'IN_PROGRESS') {
@@ -4212,10 +4232,11 @@ function renderMasterCalendar() {
   if (tableBody) {
     tableBody.innerHTML = '';
     filtered.forEach(s => {
-      const studentName = s.student ? `${s.student.firstName} ${s.student.lastName}` : 'Anonymous Student';
+      const studentName = s.student ? `${s.student.firstName || ''} ${s.student.lastName || ''}`.trim() : 'Anonymous Student';
       const studentEmail = s.student?.email || 'N/A';
-      const counselorName = s.counselor?.user ? `Dr. ${s.counselor.user.firstName} ${s.counselor.user.lastName}` : 'Dr. Sarah Jenkins';
-      const roomLink = `https://meet.jit.si/wellmindly-counseling-${s.id.slice(0, 8)}`;
+      const counselorUser = s.counselor?.user;
+      const counselorName = counselorUser ? `Dr. ${counselorUser.firstName || ''} ${counselorUser.lastName || ''}`.trim() : (s.counselor?.name || 'Assigned Counselor');
+      const roomLink = s.meetingLink || `https://meet.jit.si/wellmindly-counseling-${(s.id || '').slice(0, 8)}`;
 
       let statusBadge = '';
       if (s.status === 'IN_PROGRESS') {
@@ -4239,7 +4260,7 @@ function renderMasterCalendar() {
         <td>${statusBadge}</td>
         <td>
           <a href="${roomLink}" target="_blank" style="color: #2dd4bf; text-decoration: none; font-size: 11.5px; display: inline-flex; align-items: center; gap: 4px;">
-            <i class="bx bx-video"></i> ${s.id.slice(0, 8)}
+            <i class="bx bx-video"></i> ${(s.id || '').slice(0, 8)}
           </a>
         </td>
         <td class="text-right">
@@ -4263,11 +4284,12 @@ window.openAppointmentModal = function(sessionId) {
 
   state.activeAppointment = session;
 
-  const studentName = session.student ? `${session.student.firstName} ${session.student.lastName}` : 'Anonymous Student';
+  const studentName = session.student ? `${session.student.firstName || ''} ${session.student.lastName || ''}`.trim() : 'Anonymous Student';
   const studentEmail = session.student?.email || 'N/A';
-  const counselorName = session.counselor?.user ? `Dr. ${session.counselor.user.firstName} ${session.counselor.user.lastName}` : 'Dr. Sarah Jenkins';
-  const counselorEmail = session.counselor?.user?.email || 'counselor@wellmindly.com';
-  const roomLink = `https://meet.jit.si/wellmindly-counseling-${session.id.slice(0, 8)}`;
+  const counselorUser = session.counselor?.user;
+  const counselorName = counselorUser ? `Dr. ${counselorUser.firstName || ''} ${counselorUser.lastName || ''}`.trim() : (session.counselor?.name || 'Assigned Counselor');
+  const counselorEmail = counselorUser?.email || session.counselor?.email || 'N/A';
+  const roomLink = session.meetingLink || `https://meet.jit.si/wellmindly-counseling-${(session.id || '').slice(0, 8)}`;
 
   const nameEl = document.getElementById('app-modal-student-name');
   const emailEl = document.getElementById('app-modal-student-email');
@@ -4300,7 +4322,7 @@ window.openAppointmentModal = function(sessionId) {
   }
 
   if (notesEl) {
-    notesEl.textContent = session.cancellationReason || 'Standard clinical intake: Student requested consultation for academic performance anxiety and sleep hygiene.';
+    notesEl.textContent = session.cancellationReason || 'Standard clinical consultation encounter.';
   }
 
   document.getElementById('modal-appointment-detail')?.classList.remove('hidden');
@@ -4328,14 +4350,20 @@ window.openRescheduleModal = function(sessionId) {
     timeInput.value = isoStr;
   }
 
-  // Populate counselor select options
+  // Populate counselor select options dynamically
   if (counselorSelect) {
-    counselorSelect.innerHTML = `
-      <option value="coun-1">Dr. Sarah Jenkins (CBT & Academic Stress)</option>
-      <option value="coun-2">Dr. Michael Chen (Mindfulness & Sleep)</option>
-      <option value="coun-3">Dr. Elena Rostova (Trauma & Mood)</option>
-    `;
-    if (session.counselor?.id) counselorSelect.value = session.counselor.id;
+    if (state.counselors && state.counselors.length > 0) {
+      counselorSelect.innerHTML = state.counselors.map(c => {
+        const u = c.user;
+        const name = u ? `Dr. ${u.firstName || ''} ${u.lastName || ''}`.trim() : 'Counselor';
+        return `<option value="${c.id}">${escapeHtml(name)} (${escapeHtml(c.credentials || 'Counselor')})</option>`;
+      }).join('');
+    } else if (session.counselor) {
+      const cName = session.counselor.user ? `Dr. ${session.counselor.user.firstName || ''} ${session.counselor.user.lastName || ''}`.trim() : 'Assigned Counselor';
+      counselorSelect.innerHTML = `<option value="${session.counselor.id}">${escapeHtml(cName)}</option>`;
+    }
+    const currentCId = session.counselorId || session.counselor?.id;
+    if (currentCId) counselorSelect.value = currentCId;
   }
 
   document.getElementById('modal-reschedule-session')?.classList.remove('hidden');
@@ -4366,28 +4394,32 @@ async function handleRescheduleSessionSubmit(e) {
       })
     });
 
-    // Update in local state
-    const session = state.masterCalendarSessions.find(s => s.id === sessionId);
-    if (session) {
-      session.startTime = startTime.toISOString();
-      session.endTime = endTime.toISOString();
-      session.status = 'CONFIRMED';
-    }
+    if (res && res.success) {
+      // Update in local state
+      const session = state.masterCalendarSessions.find(s => s.id === sessionId);
+      if (session) {
+        session.startTime = startTime.toISOString();
+        session.endTime = endTime.toISOString();
+        session.status = 'CONFIRMED';
+        if (counselorId && state.counselors) {
+          const newC = state.counselors.find(c => c.id === counselorId);
+          if (newC) {
+            session.counselorId = counselorId;
+            session.counselor = newC;
+          }
+        }
+      }
 
-    showToast('Session rescheduled successfully and calendar updated.', 'success');
-    closeRescheduleModal();
-    renderMasterCalendar();
-  } catch (err) {
-    // Local fallback update
-    const session = state.masterCalendarSessions.find(s => s.id === sessionId);
-    if (session) {
-      session.startTime = startTime.toISOString();
-      session.endTime = endTime.toISOString();
-      session.status = 'CONFIRMED';
+      showToast('Session rescheduled successfully and calendar updated.', 'success');
+      closeRescheduleModal();
+      renderMasterCalendar();
+      renderCounselorAvailabilitySlots();
+    } else {
+      showToast(res?.error?.message || res?.error || 'Failed to reschedule session', 'error');
     }
-    showToast('Session rescheduled successfully.', 'success');
-    closeRescheduleModal();
-    renderMasterCalendar();
+  } catch (err) {
+    console.error('Reschedule error:', err);
+    showToast(err.message || 'Error rescheduling session.', 'error');
   }
 }
 
