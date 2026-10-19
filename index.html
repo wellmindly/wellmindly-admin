@@ -121,7 +121,14 @@
             <i class="bx bxs-star-half"></i>
             <span>Feedback Analytics</span>
           </button>
+
+          <div class="nav-section-title">Access & Governance</div>
+          <button class="nav-item" data-tab="access-control">
+            <i class="bx bxs-key"></i>
+            <span>Access Control</span>
+          </button>
         </nav>
+
 
         <div class="sidebar-footer">
           <div class="user-profile">
@@ -1284,8 +1291,146 @@
             </div>
           </div>
 
+          <!-- TAB: Access Control -->
+          <div id="tab-access-control" class="tab-pane hidden">
+            <!-- Top Hero Overview Banner -->
+            <div class="glass-card" style="padding: 24px; margin-bottom: 24px; background: linear-gradient(135deg, rgba(5, 149, 157, 0.12), rgba(122, 91, 147, 0.12)); border: 1px solid rgba(5, 149, 157, 0.25); border-radius: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; background: rgba(5, 149, 157, 0.2); color: #06b6d4; font-size: 20px;">
+                      <i class="bx bxs-shield-check"></i>
+                    </span>
+                    <h3 style="font-size: 18px; font-weight: 700; color: white; margin: 0;">Student Human Counseling Access Control</h3>
+                    <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: 600;">Live Enforced</span>
+                  </div>
+                  <p style="font-size: 13px; color: #94a3b8; line-height: 1.5; max-width: 720px; margin: 0;">
+                    Manage which students are eligible for 1-on-1 human coaching sessions. Students match either by having an official university domain (e.g. <code>@ves.ac.in</code>) or by being explicitly whitelisted in the Bypass list (e.g. <code>jmalani54@gmail.com</code>).
+                  </p>
+                </div>
+                <!-- Quick Stats Strip -->
+                <div style="display: flex; gap: 14px; align-items: center;">
+                  <div style="text-align: right; background: rgba(0,0,0,0.3); padding: 10px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+                    <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Allowed Domains</div>
+                    <div id="stat-allowed-domains-count" style="font-size: 20px; font-weight: 800; color: white;">0</div>
+                  </div>
+                  <div style="text-align: right; background: rgba(0,0,0,0.3); padding: 10px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+                    <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Bypass Accounts</div>
+                    <div id="stat-bypass-emails-count" style="font-size: 20px; font-weight: 800; color: #a855f7;">0</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Real-time Student Eligibility Diagnostic Tester -->
+              <div style="margin-top: 20px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <span style="font-size: 12px; font-weight: 600; color: #cbd5e1; display: flex; align-items: center; gap: 6px;">
+                  <i class="bx bx-check-shield text-teal"></i> Test Email Access:
+                </span>
+                <div style="display: flex; gap: 8px; flex: 1; min-width: 280px; max-width: 500px;">
+                  <input type="email" id="input-test-access-email" placeholder="e.g. jmalani54@gmail.com or student@ves.ac.in" style="flex: 1; font-size: 12px; padding: 8px 12px; border-radius: 8px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); color: white;" />
+                  <button type="button" id="btn-test-access-email" class="btn-secondary small" style="font-size: 12px; padding: 8px 14px;">Verify</button>
+                </div>
+                <div id="test-access-result" style="font-size: 12px; font-weight: 600;"></div>
+              </div>
+            </div>
+
+            <!-- Two Side-by-Side Management Cards -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 24px;">
+              
+              <!-- CARD 1: Allowed University Domains -->
+              <div class="glass-card" style="padding: 24px; border-radius: 16px; display: flex; flex-direction: column;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                  <div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <i class="bx bxs-school" style="font-size: 20px; color: #06b6d4;"></i>
+                      <h3 style="font-size: 16px; font-weight: 700; color: white; margin: 0;">1. Allowed University Domains</h3>
+                    </div>
+                    <p style="font-size: 12px; color: #94a3b8; margin-top: 4px; line-height: 1.4;">
+                      All students signing up with an email matching these domains can book human sessions.
+                    </p>
+                  </div>
+                  <button type="button" id="btn-open-add-domain-modal" class="btn-primary small" style="font-size: 12px; padding: 7px 14px; display: flex; align-items: center; gap: 6px;">
+                    <i class="bx bx-plus"></i> Add Domain
+                  </button>
+                </div>
+
+                <!-- Search Domains -->
+                <div class="search-box" style="margin-bottom: 14px;">
+                  <i class="bx bx-search"></i>
+                  <input type="text" id="search-allowed-domains" placeholder="Filter allowed domains..." style="font-size: 12px;" />
+                </div>
+
+                <!-- Domains Table -->
+                <div class="table-container" style="flex: 1; min-height: 240px; max-height: 480px; overflow-y: auto;">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Domain</th>
+                        <th>Institution / Label</th>
+                        <th>Date Added</th>
+                        <th class="text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="allowed-domains-tbody">
+                      <!-- Rendered dynamically -->
+                    </tbody>
+                  </table>
+                  <div id="allowed-domains-empty" class="text-center text-secondary hidden" style="padding: 36px 0; font-size: 13px;">
+                    No allowed domains configured yet.
+                  </div>
+                </div>
+              </div>
+
+              <!-- CARD 2: Bypass Student Emails -->
+              <div class="glass-card" style="padding: 24px; border-radius: 16px; display: flex; flex-direction: column;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                  <div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <i class="bx bxs-user-check" style="font-size: 20px; color: #a855f7;"></i>
+                      <h3 style="font-size: 16px; font-weight: 700; color: white; margin: 0;">2. Bypass Student Emails</h3>
+                    </div>
+                    <p style="font-size: 12px; color: #94a3b8; margin-top: 4px; line-height: 1.4;">
+                      Specific accounts permitted to book counseling without a university domain (e.g. Gmail VIPs).
+                    </p>
+                  </div>
+                  <button type="button" id="btn-open-add-bypass-modal" class="btn-primary small" style="font-size: 12px; padding: 7px 14px; display: flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #9333ea, #7e22ce); border-color: rgba(168,85,247,0.4);">
+                    <i class="bx bx-plus"></i> Add Email
+                  </button>
+                </div>
+
+                <!-- Search Bypass Emails -->
+                <div class="search-box" style="margin-bottom: 14px;">
+                  <i class="bx bx-search"></i>
+                  <input type="text" id="search-bypass-emails" placeholder="Filter bypass student emails..." style="font-size: 12px;" />
+                </div>
+
+                <!-- Bypass Emails Table -->
+                <div class="table-container" style="flex: 1; min-height: 240px; max-height: 480px; overflow-y: auto;">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Student Email</th>
+                        <th>Note / Access Reason</th>
+                        <th>Date Added</th>
+                        <th class="text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="bypass-emails-tbody">
+                      <!-- Rendered dynamically -->
+                    </tbody>
+                  </table>
+                  <div id="bypass-emails-empty" class="text-center text-secondary hidden" style="padding: 36px 0; font-size: 13px;">
+                    No bypass student accounts added yet.
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
         </div>
       </main>
+
     </div>
 
     <!-- Modal: Student Clinical Dossier -->
@@ -1674,7 +1819,85 @@
       </div>
     </div>
 
+    <!-- Modal: Add Allowed Domain -->
+    <div id="modal-add-allowed-domain" class="modal-wrapper hidden" style="z-index: 9998;">
+      <div class="modal-card width-md" style="max-width: 480px;">
+        <div class="modal-header">
+          <div>
+            <h2>Add Allowed University Domain</h2>
+            <p class="text-secondary" style="font-size: 12px; margin-top: 2px;">Whitelist student email domain for counseling eligibility</p>
+          </div>
+          <button class="btn-close-modal" id="btn-close-add-domain-modal"><i class="bx bx-x"></i></button>
+        </div>
+        <div class="modal-body" style="padding: 24px;">
+          <form id="form-add-allowed-domain" style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="form-group">
+              <label for="input-new-domain" style="font-size: 13px; font-weight: 600; color: white;">Domain Name <span style="color: #ef4444;">*</span></label>
+              <input type="text" id="input-new-domain" class="form-input" placeholder="e.g. ves.ac.in or @ves.ac.in" required style="background: rgba(15, 23, 42, 0.6); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; width: 100%; font-size: 13px;" />
+              <span style="font-size: 11px; color: #94a3b8; margin-top: 4px; display: block;">Leading '@' is automatically stripped. All student emails ending in this domain will be eligible.</span>
+            </div>
+            <div class="form-group">
+              <label for="input-new-domain-name" style="font-size: 13px; font-weight: 600; color: white;">Institution / Campus Name (Optional)</label>
+              <input type="text" id="input-new-domain-name" class="form-input" placeholder="e.g. Vivekanand Education Society (VESIT)" style="background: rgba(15, 23, 42, 0.6); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; width: 100%; font-size: 13px;" />
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
+              <button type="button" class="btn-secondary" id="btn-cancel-add-domain">Cancel</button>
+              <button type="submit" class="btn-primary" id="btn-submit-add-domain">Save Domain</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Add Bypass Email -->
+    <div id="modal-add-bypass-email" class="modal-wrapper hidden" style="z-index: 9998;">
+      <div class="modal-card width-md" style="max-width: 480px;">
+        <div class="modal-header">
+          <div>
+            <h2>Add Bypass Student Email</h2>
+            <p class="text-secondary" style="font-size: 12px; margin-top: 2px;">Grant human counseling access to an individual email</p>
+          </div>
+          <button class="btn-close-modal" id="btn-close-add-bypass-modal"><i class="bx bx-x"></i></button>
+        </div>
+        <div class="modal-body" style="padding: 24px;">
+          <form id="form-add-bypass-email" style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="form-group">
+              <label for="input-new-bypass-email" style="font-size: 13px; font-weight: 600; color: white;">Student Email Address <span style="color: #ef4444;">*</span></label>
+              <input type="email" id="input-new-bypass-email" class="form-input" placeholder="e.g. jmalani54@gmail.com" required style="background: rgba(15, 23, 42, 0.6); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; width: 100%; font-size: 13px;" />
+              <span style="font-size: 11px; color: #94a3b8; margin-top: 4px; display: block;">This specific user will bypass university domain restrictions and be permitted to book sessions.</span>
+            </div>
+            <div class="form-group">
+              <label for="input-new-bypass-note" style="font-size: 13px; font-weight: 600; color: white;">Note / Purpose (Optional)</label>
+              <input type="text" id="input-new-bypass-note" class="form-input" placeholder="e.g. VIP Student / Admin Testing / Special Exception" style="background: rgba(15, 23, 42, 0.6); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; width: 100%; font-size: 13px;" />
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
+              <button type="button" class="btn-secondary" id="btn-cancel-add-bypass">Cancel</button>
+              <button type="submit" class="btn-primary" id="btn-submit-add-bypass" style="background: linear-gradient(135deg, #9333ea, #7e22ce); border-color: rgba(168,85,247,0.4);">Save Bypass Account</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Delete Access Control Rule Confirm -->
+    <div id="modal-delete-access-rule" class="modal-wrapper hidden" style="z-index: 9999;">
+      <div class="modal-card width-sm" style="max-width: 420px; text-align: center;">
+        <div class="modal-body" style="padding: 28px 24px;">
+          <div style="width: 52px; height: 52px; border-radius: 16px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.25); color: #EF4444; font-size: 26px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
+            <i class="bx bx-trash"></i>
+          </div>
+          <h3 id="delete-access-rule-title" style="font-size: 18px; font-weight: 800; color: white; margin-bottom: 8px;">Remove Rule?</h3>
+          <p id="delete-access-rule-desc" style="font-size: 13px; color: #94A3B8; line-height: 1.5; margin-bottom: 22px;">Are you sure you want to remove this access rule? Affected students will immediately lose university counseling booking privileges.</p>
+          <div style="display: flex; gap: 12px; justify-content: center;">
+            <button type="button" class="btn-secondary" id="btn-cancel-delete-rule" style="flex: 1; justify-content: center;">Cancel</button>
+            <button type="button" class="btn-primary" id="btn-confirm-delete-rule" style="flex: 1; justify-content: center; background: linear-gradient(135deg, #DC2626, #B91C1C); border-color: rgba(239,68,68,0.4);">Delete Rule</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- JS Logic script -->
     <script type="module" src="/src/main.js"></script>
+
   </body>
 </html>

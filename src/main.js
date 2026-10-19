@@ -46,8 +46,17 @@ const state = {
     severityDonut: null,
     moodsBar: null,
     studentMoodTimeline: null
+  },
+
+  // Student Access Control State
+  accessControl: {
+    domains: [],
+    bypassEmails: [],
+    loaded: false,
+    deleteTarget: null
   }
 };
+
 
 // Pagination, Search, and Filter states
 const pagState = {
@@ -69,8 +78,11 @@ const searchState = {
   counselorContacts: '',
   generalContacts: '',
   dualFeedback: '',
-  masterCalendar: ''
+  masterCalendar: '',
+  allowedDomains: '',
+  bypassEmails: ''
 };
+
 
 const filterState = {
   feedbacks: { rating: '', wouldUse: '', reachFirst: '' },
@@ -500,7 +512,11 @@ function setupEventHandlers() {
   window.openInquiryDetails = openInquiryDetails;
   window.closeInquiryModal = closeInquiryModal;
   window.deleteInquiry = deleteInquiry;
+
+  // Access Control Event Handlers
+  setupAccessControlEventHandlers();
 }
+
 
 // Authentication Check
 function checkAuthentication() {
@@ -623,7 +639,8 @@ function switchTab(tabName) {
     'dual-feedback': { breadcrumb: 'Dual Feedback', title: 'Dual Feedback Analytics', subtitle: 'Inspect Student-to-Counselor ratings and Counselor clinical evaluations.' },
     university: { breadcrumb: 'University Requests', title: 'University Onboarding Inquiries', subtitle: 'Review and manage collaboration requests from university administrations.' },
     contacts: { breadcrumb: 'General Contacts', title: 'General Inquiries & Support', subtitle: 'Review and manage student, parent, and institutional contact submissions.' },
-    feedback: { breadcrumb: 'Feedback Analytics', title: 'Product & Platform Feedback', subtitle: 'Student reviews, feature sentiment, and clinical experience survey ratings.' }
+    feedback: { breadcrumb: 'Feedback Analytics', title: 'Product & Platform Feedback', subtitle: 'Student reviews, feature sentiment, and clinical experience survey ratings.' },
+    'access-control': { breadcrumb: 'Access Control', title: 'Student Access Control', subtitle: 'Manage allowed university domains and bypass student email accounts for human counseling.' }
   };
 
   const currentConfig = tabTitles[tabName] || { breadcrumb: tabName, title: tabName, subtitle: '' };
@@ -662,11 +679,12 @@ function switchTab(tabName) {
     case 'master-calendar':
       fetchAdminMasterCalendar();
       break;
-    case 'dual-feedback':
-      fetchAdminDualFeedback();
+    case 'access-control':
+      fetchAccessControlData();
       break;
   }
 }
+
 
 // Fetch helper
 async function apiFetch(endpoint, options = {}) {
@@ -4472,6 +4490,439 @@ window.closeAssessmentModal = closeAssessmentModal;
 window.openQuizDetails = openQuizDetails;
 window.closeQuizDetailView = closeQuizDetailView;
 window.fetchAdminMasterCalendar = fetchAdminMasterCalendar;
+
+// =========================================================================
+// Student Access Control Management
+// =========================================================================
+
+async function fetchAccessControlData() {
+  try {
+    const res = await apiFetch('/admin/access-control');
+    if (!res) return;
+
+    state.accessControl.domains = Array.isArray(res.domains) ? res.domains : [];
+    state.accessControl.bypassEmails = Array.isArray(res.bypassEmails) ? res.bypassEmails : [];
+    state.accessControl.loaded = true;
+
+    // Update summary badge numbers
+    const statDomains = document.getElementById('stat-allowed-domains-count');
+    const statBypass = document.getElementById('stat-bypass-emails-count');
+    if (statDomains) statDomains.textContent = state.accessControl.domains.length;
+    if (statBypass) statBypass.textContent = state.accessControl.bypassEmails.length;
+
+    renderAllowedDomainsTable();
+    renderBypassEmailsTable();
+  } catch (err) {
+    console.error('Failed to load access control data:', err);
+    showToast('Failed to load student access control settings', 'error');
+  }
+}
+
+function renderAllowedDomainsTable() {
+  const tbody = document.getElementById('allowed-domains-tbody');
+  const emptyNotice = document.getElementById('allowed-domains-empty');
+  if (!tbody) return;
+
+  const filter = (searchState.allowedDomains || '').toLowerCase().trim();
+  const list = state.accessControl.domains.filter(item => {
+    if (!filter) return true;
+    return (
+      (item.domain || '').toLowerCase().includes(filter) ||
+      (item.name || '').toLowerCase().includes(filter)
+    );
+  });
+
+  if (list.length === 0) {
+    tbody.innerHTML = '';
+    if (emptyNotice) emptyNotice.classList.remove('hidden');
+    return;
+  }
+
+  if (emptyNotice) emptyNotice.classList.add('hidden');
+
+  tbody.innerHTML = list.map(item => {
+    const formattedDate = item.createdAt ? new Date(item.createdAt).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    }) : 'Active';
+
+    return `
+      <tr>
+        <td>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 6px; background: rgba(6,182,212,0.12); color: #06b6d4; font-size: 14px;">
+              <i class="bx bxs-check-shield"></i>
+            </span>
+            <span style="font-family: monospace; font-size: 13px; font-weight: 700; color: #38bdf8;">@${escapeHtml(item.domain)}</span>
+          </div>
+        </td>
+        <td>
+          <span style="color: #cbd5e1; font-size: 13px;">${escapeHtml(item.name || 'University Domain')}</span>
+        </td>
+        <td>
+          <span style="color: #94a3b8; font-size: 12px;">${formattedDate}</span>
+        </td>
+        <td class="text-right">
+          <button class="btn-secondary small btn-delete-domain" data-id="${item.id}" data-domain="${escapeHtml(item.domain)}" title="Delete domain" style="color: #f87171; border-color: rgba(239,68,68,0.25); background: rgba(239,68,68,0.08); font-size: 11px; padding: 5px 10px;">
+            <i class="bx bx-trash"></i> Remove
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  // Attach delete handlers
+  tbody.querySelectorAll('.btn-delete-domain').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const id = e.currentTarget.getAttribute('data-id');
+      const domain = e.currentTarget.getAttribute('data-domain');
+      openDeleteAccessRuleModal('domain', id, `@${domain}`);
+    });
+  });
+}
+
+function renderBypassEmailsTable() {
+  const tbody = document.getElementById('bypass-emails-tbody');
+  const emptyNotice = document.getElementById('bypass-emails-empty');
+  if (!tbody) return;
+
+  const filter = (searchState.bypassEmails || '').toLowerCase().trim();
+  const list = state.accessControl.bypassEmails.filter(item => {
+    if (!filter) return true;
+    return (
+      (item.email || '').toLowerCase().includes(filter) ||
+      (item.note || '').toLowerCase().includes(filter)
+    );
+  });
+
+  if (list.length === 0) {
+    tbody.innerHTML = '';
+    if (emptyNotice) emptyNotice.classList.remove('hidden');
+    return;
+  }
+
+  if (emptyNotice) emptyNotice.classList.add('hidden');
+
+  tbody.innerHTML = list.map(item => {
+    const formattedDate = item.createdAt ? new Date(item.createdAt).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    }) : 'Active';
+
+    return `
+      <tr>
+        <td>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 6px; background: rgba(168,85,247,0.12); color: #c084fc; font-size: 14px;">
+              <i class="bx bxs-user"></i>
+            </span>
+            <span style="font-family: monospace; font-size: 13px; font-weight: 700; color: #c084fc;">${escapeHtml(item.email)}</span>
+          </div>
+        </td>
+        <td>
+          <span style="color: #cbd5e1; font-size: 13px;">${escapeHtml(item.note || 'Allowed bypass student')}</span>
+        </td>
+        <td>
+          <span style="color: #94a3b8; font-size: 12px;">${formattedDate}</span>
+        </td>
+        <td class="text-right">
+          <button class="btn-secondary small btn-delete-bypass" data-id="${item.id}" data-email="${escapeHtml(item.email)}" title="Delete bypass account" style="color: #f87171; border-color: rgba(239,68,68,0.25); background: rgba(239,68,68,0.08); font-size: 11px; padding: 5px 10px;">
+            <i class="bx bx-trash"></i> Remove
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  // Attach delete handlers
+  tbody.querySelectorAll('.btn-delete-bypass').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const id = e.currentTarget.getAttribute('data-id');
+      const email = e.currentTarget.getAttribute('data-email');
+      openDeleteAccessRuleModal('bypass', id, email);
+    });
+  });
+}
+
+function openAddDomainModal() {
+  const modal = document.getElementById('modal-add-allowed-domain');
+  if (modal) {
+    const domInput = document.getElementById('input-new-domain');
+    const nameInput = document.getElementById('input-new-domain-name');
+    if (domInput) domInput.value = '';
+    if (nameInput) nameInput.value = '';
+    modal.classList.remove('hidden');
+    if (domInput) domInput.focus();
+  }
+}
+
+function closeAddDomainModal() {
+  const modal = document.getElementById('modal-add-allowed-domain');
+  if (modal) modal.classList.add('hidden');
+}
+
+function openAddBypassModal() {
+  const modal = document.getElementById('modal-add-bypass-email');
+  if (modal) {
+    const emailInput = document.getElementById('input-new-bypass-email');
+    const noteInput = document.getElementById('input-new-bypass-note');
+    if (emailInput) emailInput.value = '';
+    if (noteInput) noteInput.value = '';
+    modal.classList.remove('hidden');
+    if (emailInput) emailInput.focus();
+  }
+}
+
+function closeAddBypassModal() {
+  const modal = document.getElementById('modal-add-bypass-email');
+  if (modal) modal.classList.add('hidden');
+}
+
+function openDeleteAccessRuleModal(type, id, label) {
+  state.accessControl.deleteTarget = { type, id, label };
+  const modal = document.getElementById('modal-delete-access-rule');
+  const title = document.getElementById('delete-access-rule-title');
+  const desc = document.getElementById('delete-access-rule-desc');
+
+  if (title) {
+    title.textContent = type === 'domain' ? `Remove Domain: ${label}` : `Remove Bypass: ${label}`;
+  }
+  if (desc) {
+    desc.textContent = type === 'domain'
+      ? `Are you sure you want to remove ${label}? Students signing up or logging in with emails ending in this domain will no longer have access to 1-on-1 counseling.`
+      : `Are you sure you want to remove ${label}? This user will no longer be allowed to bypass university domain requirements.`;
+  }
+
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeDeleteAccessRuleModal() {
+  state.accessControl.deleteTarget = null;
+  const modal = document.getElementById('modal-delete-access-rule');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function handleConfirmDeleteRule() {
+  const target = state.accessControl.deleteTarget;
+  if (!target) return;
+
+  const btnConfirm = document.getElementById('btn-confirm-delete-rule');
+  if (btnConfirm) btnConfirm.disabled = true;
+
+  try {
+    const endpoint = target.type === 'domain'
+      ? `/admin/access-control/domains/${encodeURIComponent(target.id)}`
+      : `/admin/access-control/bypass-emails/${encodeURIComponent(target.id)}`;
+
+    const res = await apiFetch(endpoint, { method: 'DELETE' });
+    if (res && res.success) {
+      showToast(`Removed ${target.label} successfully.`, 'info');
+      closeDeleteAccessRuleModal();
+      await fetchAccessControlData();
+    } else {
+      showToast('Failed to delete access rule', 'error');
+    }
+  } catch (err) {
+    console.error('Delete rule error:', err);
+    showToast('Failed to delete access rule', 'error');
+  } finally {
+    if (btnConfirm) btnConfirm.disabled = false;
+  }
+}
+
+async function handleAddDomainSubmit(e) {
+  e.preventDefault();
+  const domainInput = document.getElementById('input-new-domain');
+  const nameInput = document.getElementById('input-new-domain-name');
+  const btn = document.getElementById('btn-submit-add-domain');
+
+  const domain = (domainInput?.value || '').trim();
+  const name = (nameInput?.value || '').trim();
+
+  if (!domain) {
+    showToast('Please provide a domain name (e.g. ves.ac.in)', 'error');
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await apiFetch('/admin/access-control/domains', {
+      method: 'POST',
+      body: JSON.stringify({ domain, name: name || undefined })
+    });
+
+    if (res && res.success) {
+      showToast(`Domain @${res.domain.domain} added successfully!`, 'success');
+      closeAddDomainModal();
+      await fetchAccessControlData();
+    } else {
+      showToast(res?.error || 'Failed to add domain', 'error');
+    }
+  } catch (err) {
+    console.error('Add domain error:', err);
+    showToast('Failed to add domain', 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function handleAddBypassSubmit(e) {
+  e.preventDefault();
+  const emailInput = document.getElementById('input-new-bypass-email');
+  const noteInput = document.getElementById('input-new-bypass-note');
+  const btn = document.getElementById('btn-submit-add-bypass');
+
+  const email = (emailInput?.value || '').trim();
+  const note = (noteInput?.value || '').trim();
+
+  if (!email || !email.includes('@')) {
+    showToast('Please enter a valid student email address', 'error');
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await apiFetch('/admin/access-control/bypass-emails', {
+      method: 'POST',
+      body: JSON.stringify({ email, note: note || undefined })
+    });
+
+    if (res && res.success) {
+      showToast(`Bypass access granted to ${res.bypassEmail.email}!`, 'success');
+      closeAddBypassModal();
+      await fetchAccessControlData();
+    } else {
+      showToast(res?.error || 'Failed to add bypass email', 'error');
+    }
+  } catch (err) {
+    console.error('Add bypass email error:', err);
+    showToast('Failed to add bypass email', 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function handleTestAccessEmail() {
+  const input = document.getElementById('input-test-access-email');
+  const resultDiv = document.getElementById('test-access-result');
+  const btn = document.getElementById('btn-test-access-email');
+
+  const email = (input?.value || '').trim();
+  if (!email || !email.includes('@')) {
+    if (resultDiv) {
+      resultDiv.innerHTML = '<span style="color: #f87171;">Please enter a valid email address.</span>';
+    }
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+  if (resultDiv) {
+    resultDiv.innerHTML = '<span style="color: #94a3b8;"><i class="bx bx-loader-alt bx-spin"></i> Checking rules...</span>';
+  }
+
+  try {
+    const res = await apiFetch('/admin/access-control/check', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
+
+    if (!res) {
+      if (resultDiv) resultDiv.innerHTML = '<span style="color: #f87171;">Check failed</span>';
+      return;
+    }
+
+    if (res.eligible) {
+      if (res.reason === 'BYPASS_EMAIL') {
+        resultDiv.innerHTML = `<span class="badge" style="background: rgba(168,85,247,0.2); color: #c084fc; border: 1px solid rgba(168,85,247,0.4); padding: 4px 10px; border-radius: 8px;"><i class="bx bx-check-circle"></i> ELIGIBLE: Explicit Bypass Account (${escapeHtml(email)})</span>`;
+      } else {
+        resultDiv.innerHTML = `<span class="badge" style="background: rgba(16,185,129,0.2); color: #34d399; border: 1px solid rgba(16,185,129,0.4); padding: 4px 10px; border-radius: 8px;"><i class="bx bx-check-circle"></i> ELIGIBLE: Allowed University Domain (@${escapeHtml(res.domain || '')})</span>`;
+      }
+    } else {
+      resultDiv.innerHTML = `<span class="badge" style="background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.4); padding: 4px 10px; border-radius: 8px;"><i class="bx bx-x-circle"></i> RESTRICTED: Domain not allowed (University students only)</span>`;
+    }
+  } catch (err) {
+    if (resultDiv) resultDiv.innerHTML = '<span style="color: #f87171;">Error checking eligibility</span>';
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function setupAccessControlEventHandlers() {
+  // Modal openers
+  const btnOpenAddDomain = document.getElementById('btn-open-add-domain-modal');
+  if (btnOpenAddDomain) btnOpenAddDomain.addEventListener('click', openAddDomainModal);
+
+  const btnOpenAddBypass = document.getElementById('btn-open-add-bypass-modal');
+  if (btnOpenAddBypass) btnOpenAddBypass.addEventListener('click', openAddBypassModal);
+
+  // Modal closers
+  const btnCloseAddDomain = document.getElementById('btn-close-add-domain-modal');
+  const btnCancelAddDomain = document.getElementById('btn-cancel-add-domain');
+  if (btnCloseAddDomain) btnCloseAddDomain.addEventListener('click', closeAddDomainModal);
+  if (btnCancelAddDomain) btnCancelAddDomain.addEventListener('click', closeAddDomainModal);
+
+  const btnCloseAddBypass = document.getElementById('btn-close-add-bypass-modal');
+  const btnCancelAddBypass = document.getElementById('btn-cancel-add-bypass');
+  if (btnCloseAddBypass) btnCloseAddBypass.addEventListener('click', closeAddBypassModal);
+  if (btnCancelAddBypass) btnCancelAddBypass.addEventListener('click', closeAddBypassModal);
+
+  const btnCancelDeleteRule = document.getElementById('btn-cancel-delete-rule');
+  if (btnCancelDeleteRule) btnCancelDeleteRule.addEventListener('click', closeDeleteAccessRuleModal);
+
+  const btnConfirmDeleteRule = document.getElementById('btn-confirm-delete-rule');
+  if (btnConfirmDeleteRule) btnConfirmDeleteRule.addEventListener('click', handleConfirmDeleteRule);
+
+  // Forms
+  const formAddDomain = document.getElementById('form-add-allowed-domain');
+  if (formAddDomain) formAddDomain.addEventListener('submit', handleAddDomainSubmit);
+
+  const formAddBypass = document.getElementById('form-add-bypass-email');
+  if (formAddBypass) formAddBypass.addEventListener('submit', handleAddBypassSubmit);
+
+  // Search inputs
+  const searchDomains = document.getElementById('search-allowed-domains');
+  if (searchDomains) {
+    searchDomains.addEventListener('input', (e) => {
+      searchState.allowedDomains = e.target.value;
+      renderAllowedDomainsTable();
+    });
+  }
+
+  const searchBypass = document.getElementById('search-bypass-emails');
+  if (searchBypass) {
+    searchBypass.addEventListener('input', (e) => {
+      searchState.bypassEmails = e.target.value;
+      renderBypassEmailsTable();
+    });
+  }
+
+  // Diagnostic tester
+  const btnTestAccess = document.getElementById('btn-test-access-email');
+  if (btnTestAccess) btnTestAccess.addEventListener('click', handleTestAccessEmail);
+
+  const inputTestAccess = document.getElementById('input-test-access-email');
+  if (inputTestAccess) {
+    inputTestAccess.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleTestAccessEmail();
+      }
+    });
+  }
+}
+
+// Global window bindings for access control
+window.fetchAccessControlData = fetchAccessControlData;
+window.openAddDomainModal = openAddDomainModal;
+window.closeAddDomainModal = closeAddDomainModal;
+window.openAddBypassModal = openAddBypassModal;
+window.closeAddBypassModal = closeAddBypassModal;
+window.closeDeleteAccessRuleModal = closeDeleteAccessRuleModal;
+
 
 
 
