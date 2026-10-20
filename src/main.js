@@ -23,6 +23,7 @@ const state = {
   activeInquiry: null,
   universityStages: JSON.parse(localStorage.getItem('wellmindly_university_stages') || '{}'),
   universityNotes: JSON.parse(localStorage.getItem('wellmindly_university_notes') || '{}'),
+  counselorStages: JSON.parse(localStorage.getItem('wellmindly_counselor_stages') || '{}'),
   generalContactStatus: JSON.parse(localStorage.getItem('wellmindly_general_contact_status') || '{}'),
   dualFeedback: { studentToCounselor: [], counselorToStudent: [] },
   activeDualTab: 'student',
@@ -640,7 +641,8 @@ function switchTab(tabName) {
     university: { breadcrumb: 'University Requests', title: 'University Onboarding Inquiries', subtitle: 'Review and manage collaboration requests from university administrations.' },
     contacts: { breadcrumb: 'General Contacts', title: 'General Inquiries & Support', subtitle: 'Review and manage student, parent, and institutional contact submissions.' },
     feedback: { breadcrumb: 'Feedback Analytics', title: 'Product & Platform Feedback', subtitle: 'Student reviews, feature sentiment, and clinical experience survey ratings.' },
-    'access-control': { breadcrumb: 'Access Control', title: 'Student Access Control', subtitle: 'Manage allowed university domains and bypass student email accounts for human counseling.' }
+    'access-control': { breadcrumb: 'Access Control', title: 'Student Access Control', subtitle: 'Manage allowed university domains and bypass student email accounts for human counseling.' },
+    policies: { breadcrumb: 'Policy Guide', title: 'Unified Policy & Governance Guide', subtitle: 'Central operational manual for student privacy, crisis escalation, ethics, and platform regulations.' }
   };
 
   const currentConfig = tabTitles[tabName] || { breadcrumb: tabName, title: tabName, subtitle: '' };
@@ -682,8 +684,14 @@ function switchTab(tabName) {
     case 'access-control':
       fetchAccessControlData();
       break;
+    case 'policies':
+      initPolicyGuide();
+      break;
   }
 }
+
+// Global window binding for tab switching
+window.switchTab = switchTab;
 
 
 // Fetch helper
@@ -880,7 +888,7 @@ function renderUrgentActivityFeed(criticalCount) {
   }
 
   feedContainer.innerHTML = urgentItems.map(item => `
-    <div class="urgent-item ${item.type}">
+    <div class="urgent-item ${item.type}" data-tab="${item.tab}" style="cursor: pointer;" onclick="switchTab('${item.tab}')" title="Click to open ${escapeHtml(item.tab)}">
       <div class="urgent-item-info">
         <div class="urgent-item-icon">
           <i class="bx ${item.icon}"></i>
@@ -890,7 +898,7 @@ function renderUrgentActivityFeed(criticalCount) {
           <div class="urgent-item-meta">${escapeHtml(item.meta)}</div>
         </div>
       </div>
-      <button class="urgent-action-btn" onclick="switchTab('${item.tab}')">${item.actionText}</button>
+      <button class="urgent-action-btn" data-tab="${item.tab}" onclick="event.stopPropagation(); switchTab('${item.tab}')">${item.actionText}</button>
     </div>
   `).join('');
 }
@@ -996,14 +1004,15 @@ function renderOverviewCharts() {
     const severityLabels = Object.keys(severityMap);
     const severityValues = Object.values(severityMap);
     
-    // Distinct vibrant clinical colors
-    const severityColors = severityLabels.map(label => {
+    // Distinct vibrant clinical colors palette
+    const clinicalPalette = ['#06B6D4', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#3B82F6', '#14B8A6', '#F97316', '#6366F1'];
+    const severityColors = severityLabels.map((label, idx) => {
       const l = label.toLowerCase();
       if (l.includes('severe') || l.includes('distress') || l.includes('critical') || l.includes('high')) return '#EF4444'; // Red
       if (l.includes('moderate') || l.includes('elevated')) return '#F59E0B'; // Amber
       if (l.includes('mild') || l.includes('steady')) return '#10B981'; // Emerald
       if (l.includes('minimal') || l.includes('low') || l.includes('doing well') || l.includes('stable')) return '#06B6D4'; // Teal
-      return '#8B5CF6'; // Violet
+      return clinicalPalette[idx % clinicalPalette.length];
     });
 
     const displayLabels = severityLabels.length ? severityLabels : ['Minimal Severity', 'Mild Wellbeing', 'Moderate Elevated', 'Severe Distress'];
@@ -2604,6 +2613,13 @@ function renderCounselorContacts(totalCount = state.counselorContacts.length) {
 
     if (!matchesSearch) return false;
 
+    const itemStage = item.stage || state.counselorStages?.[item.id] || 'NEW_APPLICATION';
+
+    if (cat === 'STAGE_NEW') return itemStage === 'NEW_APPLICATION';
+    if (cat === 'STAGE_DOCS') return itemStage === 'DOCS_REQUESTED';
+    if (cat === 'STAGE_INVITED') return itemStage === 'INVITE_SENT';
+    if (cat === 'STAGE_ONBOARDED') return itemStage === 'ONBOARDED';
+
     if (cat === 'PSYCH') {
       return (item.credentials || '').toLowerCase().includes('psych') || (item.credentials || '').toLowerCase().includes('phd');
     }
@@ -2623,7 +2639,7 @@ function renderCounselorContacts(totalCount = state.counselorContacts.length) {
   const displayItems = (q || cat) ? filtered.slice((config.page - 1) * config.pageSize, config.page * config.pageSize) : filtered;
 
   if (displayItems.length === 0) {
-    listEl.innerHTML = `<tr><td colspan="6" class="text-secondary" style="text-align:center; padding:36px; color: rgba(255,255,255,0.4);">No counselor applications matching filters.</td></tr>`;
+    listEl.innerHTML = `<tr><td colspan="7" class="text-secondary" style="text-align:center; padding:36px; color: rgba(255,255,255,0.4);">No counselor applications matching filters.</td></tr>`;
     renderPaginationControls('counselor-contact-pagination', config.page, totalPages, page => {
       pagState.counselorContacts.page = page;
       fetchCounselorContacts();
@@ -2634,6 +2650,7 @@ function renderCounselorContacts(totalCount = state.counselorContacts.length) {
   displayItems.forEach(item => {
     const row = document.createElement('tr');
     const initials = (item.name || 'C').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+    const stage = item.stage || state.counselorStages?.[item.id] || 'NEW_APPLICATION';
 
     row.innerHTML = `
       <td>
@@ -2653,6 +2670,25 @@ function renderCounselorContacts(totalCount = state.counselorContacts.length) {
         <span class="badge-credentials" style="font-size: 11px; background: rgba(122, 91, 147, 0.2); color: #c084fc; border: 1px solid rgba(122, 91, 147, 0.4); padding: 3px 8px; border-radius: 4px;">
           ${escapeHtml(item.credentials || 'General Coaching')}
         </span>
+      </td>
+      <td>
+        ${stage === 'DOCS_REQUESTED' ? `
+          <span class="badge" style="font-size: 11px; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); padding: 3px 8px; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+            <i class="bx bx-file-find"></i> Docs Requested
+          </span>
+        ` : stage === 'INVITE_SENT' ? `
+          <span class="badge" style="font-size: 11px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 3px 8px; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+            <i class="bx bx-paper-plane"></i> Invite Sent
+          </span>
+        ` : stage === 'ONBOARDED' ? `
+          <span class="badge" style="font-size: 11px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 3px 8px; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+            <i class="bx bx-check-shield"></i> Active Counselor
+          </span>
+        ` : `
+          <span class="badge" style="font-size: 11px; background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); padding: 3px 8px; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+            <i class="bx bx-time-five"></i> New Application
+          </span>
+        `}
       </td>
       <td><span style="font-size: 12px; color: rgba(255,255,255,0.5);">${formatDateString(item.createdAt)}</span></td>
       <td class="text-right">
@@ -2867,7 +2903,7 @@ function openInquiryDetails(type, id) {
     stageBox.style.background = 'rgba(255,255,255,0.03)';
     stageBox.style.border = '1px solid rgba(255,255,255,0.08)';
     stageBox.style.borderRadius = '10px';
-    stageBox.style.marginBottom = '8px';
+    stageBox.style.marginBottom = '12px';
 
     stageBox.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -2886,6 +2922,46 @@ function openInquiryDetails(type, id) {
         <div style="flex: 1; height: 4px; border-radius: 2px; background: ${['CONTACTED', 'DEMO_SCHEDULED', 'PARTNERED'].includes(currentStage) ? '#fbbf24' : 'rgba(255,255,255,0.1)'};"></div>
         <div style="flex: 1; height: 4px; border-radius: 2px; background: ${['DEMO_SCHEDULED', 'PARTNERED'].includes(currentStage) ? '#818cf8' : 'rgba(255,255,255,0.1)'};"></div>
         <div style="flex: 1; height: 4px; border-radius: 2px; background: ${currentStage === 'PARTNERED' ? '#10b981' : 'rgba(255,255,255,0.1)'};"></div>
+      </div>
+    `;
+    container.appendChild(stageBox);
+  } else if (type === 'counselor') {
+    const currentStage = item.stage || state.counselorStages?.[item.id] || 'NEW_APPLICATION';
+    const stageBox = document.createElement('div');
+    stageBox.className = 'glass-card';
+    stageBox.style.padding = '16px';
+    stageBox.style.background = 'rgba(255,255,255,0.03)';
+    stageBox.style.border = '1px solid rgba(255,255,255,0.08)';
+    stageBox.style.borderRadius = '10px';
+    stageBox.style.marginBottom = '12px';
+
+    const stageColors = {
+      NEW_APPLICATION: '#c084fc',
+      DOCS_REQUESTED: '#fbbf24',
+      INVITE_SENT: '#60a5fa',
+      ONBOARDED: '#34d399'
+    };
+
+    stageBox.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+        <div>
+          <span style="font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px;">
+            <i class='bx bx-git-branch' style="color: ${stageColors[currentStage] || '#c084fc'};"></i> Onboarding Journey Stage
+          </span>
+          ${item.stageUpdatedAt ? `<span style="font-size: 10.5px; color: rgba(255,255,255,0.4);">Updated: ${formatDateString(item.stageUpdatedAt)}</span>` : ''}
+        </div>
+        <select onchange="updateCounselorStage('${item.id}', this.value)" class="form-select" style="padding: 6px 12px; font-size: 12px; width: auto;">
+          <option value="NEW_APPLICATION" ${currentStage === 'NEW_APPLICATION' ? 'selected' : ''}>🟣 New Application</option>
+          <option value="DOCS_REQUESTED" ${currentStage === 'DOCS_REQUESTED' ? 'selected' : ''}>🟡 Docs Requested</option>
+          <option value="INVITE_SENT" ${currentStage === 'INVITE_SENT' ? 'selected' : ''}>🔵 Invite Sent</option>
+          <option value="ONBOARDED" ${currentStage === 'ONBOARDED' ? 'selected' : ''}>🟢 Active Counselor</option>
+        </select>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center; padding-top: 4px;">
+        <div style="flex: 1; height: 4px; border-radius: 2px; background: ${['NEW_APPLICATION', 'DOCS_REQUESTED', 'INVITE_SENT', 'ONBOARDED'].includes(currentStage) ? '#c084fc' : 'rgba(255,255,255,0.1)'};" title="Step 1: Application Received"></div>
+        <div style="flex: 1; height: 4px; border-radius: 2px; background: ${['DOCS_REQUESTED', 'INVITE_SENT', 'ONBOARDED'].includes(currentStage) ? '#fbbf24' : 'rgba(255,255,255,0.1)'};" title="Step 2: Verification Docs Requested"></div>
+        <div style="flex: 1; height: 4px; border-radius: 2px; background: ${['INVITE_SENT', 'ONBOARDED'].includes(currentStage) ? '#60a5fa' : 'rgba(255,255,255,0.1)'};" title="Step 3: Portal Registration Invite Sent"></div>
+        <div style="flex: 1; height: 4px; border-radius: 2px; background: ${currentStage === 'ONBOARDED' ? '#34d399' : 'rgba(255,255,255,0.1)'};" title="Step 4: Active Registered Counselor"></div>
       </div>
     `;
     container.appendChild(stageBox);
@@ -2992,6 +3068,19 @@ window.updateUniversityStage = function(inquiryId, newStage) {
   localStorage.setItem('wellmindly_university_stages', JSON.stringify(state.universityStages));
   showToast(`Partnership stage updated to "${newStage}".`, 'success');
   renderUniversityContacts();
+};
+
+// Update Counselor Onboarding Stage
+window.updateCounselorStage = function(inquiryId, newStage) {
+  state.counselorStages[inquiryId] = newStage;
+  localStorage.setItem('wellmindly_counselor_stages', JSON.stringify(state.counselorStages));
+  const c = state.counselorContacts.find(x => x.id === inquiryId);
+  if (c) {
+    c.stage = newStage;
+    c.stageUpdatedAt = new Date().toISOString();
+  }
+  showToast(`Counselor onboarding stage updated to "${newStage}".`, 'success');
+  renderCounselorContacts();
 };
 
 // Add Note to University Inquiry
@@ -3713,9 +3802,16 @@ async function fetchAdminCounselors() {
       <tr>
         <td>
           <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, hsl(var(--primary-teal)), #10b981); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: white; border: 1px solid rgba(255,255,255,0.2);">
-              ${initials}
-            </div>
+            ${c.avatarUrl ? `
+              <img src="${escapeHtml(c.avatarUrl)}" alt="${initials}" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+              <div style="display: none; width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, hsl(var(--primary-teal)), #10b981); align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: white; border: 1px solid rgba(255,255,255,0.2);">
+                ${initials}
+              </div>
+            ` : `
+              <div style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, hsl(var(--primary-teal)), #10b981); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: white; border: 1px solid rgba(255,255,255,0.2);">
+                ${initials}
+              </div>
+            `}
             <div>
               <div style="font-weight: 700; font-size: 13.5px; color: white;">${escapeHtml(c.user?.firstName)} ${escapeHtml(c.user?.lastName)}</div>
               <div style="font-size: 11px; color: hsl(var(--text-secondary)); margin-top: 1px;">${escapeHtml(c.user?.email)}</div>
@@ -3915,7 +4011,18 @@ window.requestCounselorDocs = async function(id) {
   showToast('Sending document request email...', 'info');
   const res = await apiPost(`/contacts/counselor/${id}/request-docs`, {});
   if (res && res.success) {
+    state.counselorStages[id] = 'DOCS_REQUESTED';
+    localStorage.setItem('wellmindly_counselor_stages', JSON.stringify(state.counselorStages));
+    if (item) {
+      item.stage = 'DOCS_REQUESTED';
+      item.stageUpdatedAt = new Date().toISOString();
+    }
+    renderCounselorContacts();
     showToast(res.message || `Document request email sent to ${item?.email || 'applicant'}`, 'success');
+    const modal = document.getElementById('modal-inquiry');
+    if (modal && !modal.classList.contains('hidden')) {
+      openInquiryDetails('counselor', id);
+    }
   } else {
     showToast(res?.error?.message || 'Failed to send document request email', 'error');
   }
@@ -3926,6 +4033,13 @@ window.approveCounselorApplication = async function(id) {
   showToast('Approving counselor application...', 'info');
   const res = await apiPost(`/contacts/counselor/${id}/approve-onboard`, {});
   if (res && res.success) {
+    state.counselorStages[id] = 'INVITE_SENT';
+    localStorage.setItem('wellmindly_counselor_stages', JSON.stringify(state.counselorStages));
+    if (item) {
+      item.stage = 'INVITE_SENT';
+      item.stageUpdatedAt = new Date().toISOString();
+    }
+    renderCounselorContacts();
     closeInquiryModal();
     if (res.setupUrl) {
       showCustomAlert(
@@ -3937,6 +4051,7 @@ window.approveCounselorApplication = async function(id) {
       showToast(res.message || 'Counselor approved and account activated!', 'success');
     }
     fetchCounselorContacts();
+    fetchAdminCounselors();
   } else {
     showToast(res?.error?.message || 'Failed to approve counselor application', 'error');
   }
@@ -3979,6 +4094,27 @@ window.uploadCounselorAvatar = async function(fileInput, targetInputId, previewI
 };
 
 // ── MASTER SESSIONS CALENDAR & APPOINTMENT DISPATCHER ────────────────
+
+function formatCounselorDisplayName(user, credentials = '') {
+  if (!user && !credentials) return 'Assigned Counselor';
+  const first = user?.firstName || '';
+  const last = user?.lastName || '';
+  const fullName = `${first} ${last}`.trim() || user?.name || 'Counselor';
+
+  // Check if already prefixed with Dr.
+  if (/^dr\.?\s+/i.test(fullName)) {
+    return fullName;
+  }
+
+  // Check if user holds a doctoral degree / doctorate in credentials or name
+  const textToCheck = `${fullName} ${credentials}`.toLowerCase();
+  const isDoctor = /\b(ph\.?d|psy\.?d|m\.?d|doctor)\b/i.test(textToCheck);
+
+  if (isDoctor) {
+    return `Dr. ${fullName}`;
+  }
+  return fullName;
+}
 
 async function fetchAdminMasterCalendar() {
   try {
@@ -4042,16 +4178,20 @@ function renderCounselorAvailabilitySlots() {
   let counselors = [];
   const colors = ['hsl(var(--primary-plum))', 'hsl(var(--primary-teal))', '#2563eb', '#10b981', '#f59e0b'];
 
-  if (state.counselors && state.counselors.length > 0) {
-    counselors = state.counselors.map((c, i) => {
+  // Exclude suspended counselors - only display ACTIVE counselors in capacity
+  const activeCounselors = (state.counselors || []).filter(c => c.status === 'ACTIVE');
+
+  if (activeCounselors.length > 0) {
+    counselors = activeCounselors.map((c, i) => {
       const booked = sessions.filter(s => (s.counselorId === c.id || s.counselor?.id === c.id) && s.status !== 'CANCELLED_BY_STUDENT' && s.status !== 'CANCELLED_BY_COUNSELOR').length;
       const total = 20;
       const u = c.user;
-      const name = u ? `Dr. ${u.firstName || ''} ${u.lastName || ''}`.trim() : 'Counselor';
+      const name = formatCounselorDisplayName(u, c.credentials);
       return {
         name,
         role: c.credentials || 'Clinical Counselor',
         special: c.specializations?.join(' & ') || (u?.email || 'Student Wellness'),
+        avatarUrl: c.avatarUrl || null,
         booked,
         total,
         color: colors[i % colors.length]
@@ -4065,11 +4205,12 @@ function renderCounselorAvailabilitySlots() {
         const cId = s.counselor.id || s.counselorId || ('c-' + i);
         if (!cMap.has(cId)) {
           const u = s.counselor.user;
-          const name = u ? `Dr. ${u.firstName || ''} ${u.lastName || ''}`.trim() : 'Assigned Counselor';
+          const name = formatCounselorDisplayName(u, s.counselor?.credentials);
           cMap.set(cId, {
             name,
-            role: 'Clinical Counselor',
+            role: s.counselor?.credentials || 'Clinical Counselor',
             special: u?.email || 'Counseling Services',
+            avatarUrl: s.counselor?.avatarUrl || null,
             booked: 0,
             total: 20,
             color: colors[cMap.size % colors.length]
@@ -4093,7 +4234,7 @@ function renderCounselorAvailabilitySlots() {
   }
 
   container.innerHTML = counselors.map(c => {
-    const initials = (c.name.replace(/^Dr\.\s*/i, '').trim().split(/\s+/).map(n => n[0]).join('').slice(0, 2) || 'DR').toUpperCase();
+    const initials = (c.name.replace(/^Dr\.\s*/i, '').trim().split(/\s+/).map(n => n[0]).join('').slice(0, 2) || 'WC').toUpperCase();
     const pct = Math.round((c.booked / c.total) * 100);
     const isNearFull = pct >= 85;
 
@@ -4101,9 +4242,16 @@ function renderCounselorAvailabilitySlots() {
       <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 14px; border-radius: 10px;">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
           <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="width: 32px; height: 32px; border-radius: 8px; background: ${c.color}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; color: white;">
-              ${initials}
-            </div>
+            ${c.avatarUrl ? `
+              <img src="${escapeHtml(c.avatarUrl)}" alt="${initials}" style="width: 32px; height: 32px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+              <div style="display: none; width: 32px; height: 32px; border-radius: 8px; background: ${c.color}; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; color: white;">
+                ${initials}
+              </div>
+            ` : `
+              <div style="width: 32px; height: 32px; border-radius: 8px; background: ${c.color}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; color: white;">
+                ${initials}
+              </div>
+            `}
             <div>
               <strong style="color: white; font-size: 12.5px; display: block;">${escapeHtml(c.name)}</strong>
               <span style="font-size: 10.5px; color: rgba(255,255,255,0.4);">${escapeHtml(c.special)}</span>
@@ -4130,7 +4278,7 @@ function renderCounselorAvailabilitySlots() {
 function renderMasterCalendar() {
   const sessions = state.masterCalendarSessions || [];
 
-  // Update KPI Strip
+  // Update KPI Strip using only active counselors
   const kpiTotal = document.getElementById('kpi-cal-total');
   const kpiUpcoming = document.getElementById('kpi-cal-upcoming');
   const kpiCompleted = document.getElementById('kpi-cal-completed');
@@ -4142,7 +4290,8 @@ function renderMasterCalendar() {
   if (kpiTotal) kpiTotal.textContent = sessions.length;
   if (kpiUpcoming) kpiUpcoming.textContent = upcomingCount;
   if (kpiCompleted) kpiCompleted.textContent = completedCount;
-  const totalCapacity = Math.max(1, (state.counselors?.length || 1) * 20);
+  const activeCounselors = (state.counselors || []).filter(c => c.status === 'ACTIVE');
+  const totalCapacity = Math.max(1, (activeCounselors.length || 1) * 20);
   const activeSessions = sessions.filter(s => s.status !== 'CANCELLED_BY_STUDENT' && s.status !== 'CANCELLED_BY_COUNSELOR').length;
   if (kpiUtilization) kpiUtilization.textContent = `${Math.min(100, Math.round((activeSessions / totalCapacity) * 100))}%`;
 
@@ -4179,7 +4328,7 @@ function renderMasterCalendar() {
       const studentInitials = (studentName.replace(/[^a-zA-Z0-9 ]/g, '').trim().split(/\s+/).map(n => n[0]).join('').slice(0, 2) || 'ST').toUpperCase();
 
       const counselorUser = s.counselor?.user;
-      const counselorName = counselorUser ? `Dr. ${counselorUser.firstName || ''} ${counselorUser.lastName || ''}`.trim() : (s.counselor?.name || 'Assigned Counselor');
+      const counselorName = counselorUser ? formatCounselorDisplayName(counselorUser, s.counselor?.credentials) : (s.counselor?.name ? formatCounselorDisplayName(s.counselor, s.counselor?.credentials) : 'Assigned Counselor');
       const roomLink = s.meetingLink || `https://meet.jit.si/wellmindly-counseling-${(s.id || '').slice(0, 8)}`;
 
       let statusBadge = '';
@@ -4253,7 +4402,7 @@ function renderMasterCalendar() {
       const studentName = s.student ? `${s.student.firstName || ''} ${s.student.lastName || ''}`.trim() : 'Anonymous Student';
       const studentEmail = s.student?.email || 'N/A';
       const counselorUser = s.counselor?.user;
-      const counselorName = counselorUser ? `Dr. ${counselorUser.firstName || ''} ${counselorUser.lastName || ''}`.trim() : (s.counselor?.name || 'Assigned Counselor');
+      const counselorName = counselorUser ? formatCounselorDisplayName(counselorUser, s.counselor?.credentials) : (s.counselor?.name ? formatCounselorDisplayName(s.counselor, s.counselor?.credentials) : 'Assigned Counselor');
       const roomLink = s.meetingLink || `https://meet.jit.si/wellmindly-counseling-${(s.id || '').slice(0, 8)}`;
 
       let statusBadge = '';
@@ -4305,7 +4454,7 @@ window.openAppointmentModal = function(sessionId) {
   const studentName = session.student ? `${session.student.firstName || ''} ${session.student.lastName || ''}`.trim() : 'Anonymous Student';
   const studentEmail = session.student?.email || 'N/A';
   const counselorUser = session.counselor?.user;
-  const counselorName = counselorUser ? `Dr. ${counselorUser.firstName || ''} ${counselorUser.lastName || ''}`.trim() : (session.counselor?.name || 'Assigned Counselor');
+  const counselorName = counselorUser ? formatCounselorDisplayName(counselorUser, session.counselor?.credentials) : (session.counselor?.name ? formatCounselorDisplayName(session.counselor, session.counselor?.credentials) : 'Assigned Counselor');
   const counselorEmail = counselorUser?.email || session.counselor?.email || 'N/A';
   const roomLink = session.meetingLink || `https://meet.jit.si/wellmindly-counseling-${(session.id || '').slice(0, 8)}`;
 
@@ -4368,16 +4517,17 @@ window.openRescheduleModal = function(sessionId) {
     timeInput.value = isoStr;
   }
 
-  // Populate counselor select options dynamically
+  // Populate counselor select options dynamically - exclude suspended counselors
   if (counselorSelect) {
-    if (state.counselors && state.counselors.length > 0) {
-      counselorSelect.innerHTML = state.counselors.map(c => {
+    const activeCounselors = (state.counselors || []).filter(c => c.status === 'ACTIVE');
+    if (activeCounselors.length > 0) {
+      counselorSelect.innerHTML = activeCounselors.map(c => {
         const u = c.user;
-        const name = u ? `Dr. ${u.firstName || ''} ${u.lastName || ''}`.trim() : 'Counselor';
+        const name = formatCounselorDisplayName(u, c.credentials);
         return `<option value="${c.id}">${escapeHtml(name)} (${escapeHtml(c.credentials || 'Counselor')})</option>`;
       }).join('');
     } else if (session.counselor) {
-      const cName = session.counselor.user ? `Dr. ${session.counselor.user.firstName || ''} ${session.counselor.user.lastName || ''}`.trim() : 'Assigned Counselor';
+      const cName = session.counselor.user ? formatCounselorDisplayName(session.counselor.user, session.counselor.credentials) : 'Assigned Counselor';
       counselorSelect.innerHTML = `<option value="${session.counselor.id}">${escapeHtml(cName)}</option>`;
     }
     const currentCId = session.counselorId || session.counselor?.id;
@@ -4922,6 +5072,403 @@ window.closeAddDomainModal = closeAddDomainModal;
 window.openAddBypassModal = openAddBypassModal;
 window.closeAddBypassModal = closeAddBypassModal;
 window.closeDeleteAccessRuleModal = closeDeleteAccessRuleModal;
+
+// =========================================================================
+// Unified Policy & Governance Guide Logic
+// =========================================================================
+
+function initPolicyGuide() {
+  const searchInput = document.getElementById('search-policy-guide');
+  const filterContainer = document.getElementById('policy-category-filters');
+  const cards = document.querySelectorAll('.policy-item-card');
+
+  let currentCat = 'all';
+  let currentQuery = '';
+
+  function filterCards() {
+    cards.forEach(card => {
+      const cat = card.getAttribute('data-category');
+      const matchesCat = currentCat === 'all' || cat === currentCat;
+      const text = card.textContent.toLowerCase();
+      const matchesSearch = !currentQuery || text.includes(currentQuery);
+
+      card.style.display = (matchesCat && matchesSearch) ? 'block' : 'none';
+    });
+  }
+
+  if (searchInput) {
+    searchInput.oninput = (e) => {
+      currentQuery = e.target.value.toLowerCase().trim();
+      filterCards();
+    };
+  }
+
+  if (filterContainer) {
+    const buttons = filterContainer.querySelectorAll('.policy-filter-btn');
+    buttons.forEach(btn => {
+      btn.onclick = () => {
+        buttons.forEach(b => {
+          b.className = 'btn-secondary small policy-filter-btn';
+        });
+        btn.className = 'btn-primary small policy-filter-btn';
+        currentCat = btn.getAttribute('data-category') || 'all';
+        filterCards();
+      };
+    });
+  }
+}
+
+// =========================================================================
+// Global CSV Export Utility & Export Functions
+// =========================================================================
+
+function downloadCSV(filename, headers, rows) {
+  if (!rows || rows.length === 0) {
+    showToast('No records available to export.', 'info');
+    return;
+  }
+
+  const escapeCSV = (val) => {
+    if (val === null || val === undefined) return '""';
+    const str = String(val).replace(/"/g, '""');
+    return `"${str}"`;
+  };
+
+  const csvContent = [
+    headers.map(escapeCSV).join(','),
+    ...rows.map(row => row.map(escapeCSV).join(','))
+  ].join('\r\n');
+
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename.endsWith('.csv') ? filename : `${filename}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`Exported ${rows.length} rows to ${a.download}`, 'success');
+}
+
+// 1. Dashboard Summary KPIs CSV
+window.exportDashboardSummaryCSV = async function() {
+  const m = state.metrics || {};
+  const rows = [
+    ['Clinical Screening', 'Total Assessments Administered', m.totalQuizzes || state.quizzes?.length || 0, 'Completed PHQ/GAD/Wellbeing', new Date().toISOString()],
+    ['Clinical Screening', 'Severe Distress / Crisis Alerts', m.severeQuizzes || 0, 'Critical intervention threshold', new Date().toISOString()],
+    ['Student Registry', 'Registered Students', m.totalStudents || state.students?.length || 0, 'Enrolled student accounts', new Date().toISOString()],
+    ['Counselor Network', 'Active Clinical Counselors', (state.counselors || []).filter(c => c.status === 'ACTIVE').length, 'Active telehealth providers', new Date().toISOString()],
+    ['Counselor Network', 'Total Counselor Applications', state.counselorContacts?.length || 0, 'Inbound onboarding applications', new Date().toISOString()],
+    ['Appointments', 'Total Master Calendar Sessions', state.masterCalendarSessions?.length || 0, 'Clinical appointments', new Date().toISOString()],
+    ['Partnerships', 'University Inquiries', state.universityContacts?.length || 0, 'Campus collaboration requests', new Date().toISOString()],
+    ['Support', 'General Visitor Inquiries', state.generalContacts?.length || 0, 'Contact requests logged', new Date().toISOString()],
+    ['Student Voice', 'Platform Feedback Reviews', state.feedbacks?.length || 0, 'Student experience reviews', new Date().toISOString()]
+  ];
+  downloadCSV('wellmindly-dashboard-summary-kpis', ['Metric Category', 'KPI Name', 'Value', 'Context / Status', 'Exported At'], rows);
+};
+
+// 2. Students CSV
+window.exportStudentsCSV = async function() {
+  let list = state.students;
+  if (!list || list.length === 0) {
+    try {
+      const res = await apiFetch('/students?page=1&limit=500');
+      if (res && res.students) list = res.students;
+    } catch (e) {
+      console.warn('Failed to prefetch students for CSV:', e);
+    }
+  }
+  const rows = (list || []).map(s => [
+    s.id,
+    `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Anonymous Student',
+    s.firstName || '',
+    s.lastName || '',
+    s.email || '',
+    s.university || s.college || 'N/A',
+    s.role || 'STUDENT',
+    s.status || 'ACTIVE',
+    s.createdAt ? formatDateString(s.createdAt) : 'N/A',
+    s.quizCount ?? (s.quizzes?.length || 0),
+    s.lastActiveAt ? formatDateString(s.lastActiveAt) : (s.createdAt ? formatDateString(s.createdAt) : 'N/A')
+  ]);
+  downloadCSV('wellmindly-students-registry', ['Student ID', 'Full Name', 'First Name', 'Last Name', 'Email', 'University', 'Role', 'Status', 'Registered Date', 'Assessments Count', 'Last Active'], rows);
+};
+
+// 3. Assessments CSV
+window.exportAssessmentsCSV = async function() {
+  let list = state.quizzes;
+  if (!list || list.length === 0) {
+    try {
+      const res = await apiFetch('/quizzes?page=1&limit=500');
+      if (res && res.quizzes) list = res.quizzes;
+    } catch (e) {
+      console.warn('Failed to prefetch quizzes for CSV:', e);
+    }
+  }
+  const rows = (list || []).map(q => [
+    q.id,
+    q.student ? `${q.student.firstName || ''} ${q.student.lastName || ''}`.trim() : 'Anonymous',
+    q.student?.email || 'N/A',
+    q.quizType || q.title || 'PHQ-9 Wellbeing Screening',
+    q.score ?? 'N/A',
+    q.maxScore ?? 27,
+    q.severity || 'Normal',
+    q.isCritical ? 'CRITICAL_ALERT' : 'ROUTINE',
+    q.createdAt ? formatDateString(q.createdAt) : 'N/A'
+  ]);
+  downloadCSV('wellmindly-clinical-assessments', ['Assessment ID', 'Student Name', 'Student Email', 'Assessment Type', 'Score', 'Max Score', 'Severity Level', 'Risk Flag', 'Completed At'], rows);
+};
+
+// 4. Counselor Applications CSV
+window.exportCounselorApplicationsCSV = async function() {
+  let list = state.counselorContacts;
+  if (!list || list.length === 0) {
+    try {
+      const res = await apiFetch('/contacts/counselor?page=1&limit=200');
+      if (res && res.requests) list = res.requests;
+    } catch (e) {
+      console.warn('Failed to prefetch counselor applications for CSV:', e);
+    }
+  }
+  const rows = (list || []).map(c => {
+    const stage = c.stage || state.counselorStages?.[c.id] || 'NEW_APPLICATION';
+    return [
+      c.id,
+      c.name || '',
+      c.email || '',
+      c.phone || 'N/A',
+      c.credentials || 'General Coaching',
+      (c.experience || '').replace(/\r?\n/g, ' '),
+      (c.message || '').replace(/\r?\n/g, ' '),
+      stage,
+      c.createdAt ? formatDateString(c.createdAt) : 'N/A',
+      c.stageUpdatedAt ? formatDateString(c.stageUpdatedAt) : (c.createdAt ? formatDateString(c.createdAt) : 'N/A')
+    ];
+  });
+  downloadCSV('wellmindly-counselor-onboarding-applications', ['Application ID', 'Applicant Name', 'Email Address', 'Phone Number', 'Credentials / Licenses', 'Experience Summary', 'Cover Note', 'Onboarding Journey Stage', 'Submitted Date', 'Stage Updated At'], rows);
+};
+
+// 5. Counselor Directory CSV
+window.exportCounselorsCSV = async function() {
+  let list = state.counselors;
+  if (!list || list.length === 0) {
+    try {
+      const res = await apiFetch('/v1/admin/counselors');
+      if (res && res.data) list = res.data;
+    } catch (e) {
+      console.warn('Failed to prefetch counselors for CSV:', e);
+    }
+  }
+  const rows = (list || []).map(c => [
+    c.id,
+    formatCounselorDisplayName(c.user, c.credentials),
+    c.user?.email || 'N/A',
+    c.credentials || 'General Wellness',
+    Array.isArray(c.specializations) ? c.specializations.join('; ') : (c.specializations || 'N/A'),
+    c.status || 'ACTIVE',
+    c.user?.timezone || 'UTC',
+    c._count?.sessions || 0,
+    (c.bio || '').replace(/\r?\n/g, ' ')
+  ]);
+  downloadCSV('wellmindly-counselor-roster', ['Counselor ID', 'Full Name', 'Email Address', 'Credentials', 'Specializations', 'Account Status', 'Timezone', 'Completed Sessions', 'Bio Summary'], rows);
+};
+
+// 6. Master Calendar Sessions CSV
+window.exportSessionsCSV = async function() {
+  let list = state.masterCalendarSessions;
+  if (!list || list.length === 0) {
+    try {
+      const res = await apiFetch('/v1/admin/calendar');
+      if (res && res.data) list = res.data;
+    } catch (e) {
+      console.warn('Failed to prefetch calendar sessions for CSV:', e);
+    }
+  }
+  const rows = (list || []).map(s => {
+    const counselorUser = s.counselor?.user;
+    const counselorName = counselorUser ? formatCounselorDisplayName(counselorUser, s.counselor?.credentials) : (s.counselor?.name ? formatCounselorDisplayName(s.counselor, s.counselor?.credentials) : 'Assigned Counselor');
+    return [
+      s.id,
+      s.student ? `${s.student.firstName || ''} ${s.student.lastName || ''}`.trim() : 'Anonymous Student',
+      s.student?.email || 'N/A',
+      counselorName,
+      s.startTime ? new Date(s.startTime).toISOString() : 'N/A',
+      s.endTime ? new Date(s.endTime).toISOString() : 'N/A',
+      s.status || 'CONFIRMED',
+      s.meetingLink || `https://meet.jit.si/wellmindly-counseling-${(s.id || '').slice(0, 8)}`,
+      s.cancellationReason || '',
+      s.createdAt ? formatDateString(s.createdAt) : 'N/A'
+    ];
+  });
+  downloadCSV('wellmindly-master-calendar-sessions', ['Session ID', 'Student Name', 'Student Email', 'Counselor Name', 'Scheduled Start Time', 'End Time', 'Status', 'Meeting Link', 'Cancellation Reason', 'Booked At'], rows);
+};
+
+// 7. University Contacts CSV
+window.exportUniversityContactsCSV = async function() {
+  let list = state.universityContacts;
+  if (!list || list.length === 0) {
+    try {
+      const res = await apiFetch('/contacts/university?page=1&limit=200');
+      if (res && res.requests) list = res.requests;
+    } catch (e) {
+      console.warn('Failed to prefetch university contacts for CSV:', e);
+    }
+  }
+  const rows = (list || []).map(u => [
+    u.id,
+    u.universityName || 'Campus Institution',
+    u.name || '',
+    u.role || '',
+    u.email || '',
+    u.phone || 'N/A',
+    (u.message || '').replace(/\r?\n/g, ' '),
+    state.universityStages?.[u.id] || 'NEW',
+    u.createdAt ? formatDateString(u.createdAt) : 'N/A'
+  ]);
+  downloadCSV('wellmindly-university-partnerships', ['Inquiry ID', 'Campus Institution', 'Contact Person', 'Official Role', 'Institutional Email', 'Phone', 'Requirements & Message', 'Partnership Pipeline Stage', 'Submission Date'], rows);
+};
+
+// 8. General Contacts CSV
+window.exportGeneralContactsCSV = async function() {
+  let list = state.generalContacts;
+  if (!list || list.length === 0) {
+    try {
+      const res = await apiFetch('/contacts/general?page=1&limit=200');
+      if (res && res.contacts) list = res.contacts;
+    } catch (e) {
+      console.warn('Failed to prefetch general contacts for CSV:', e);
+    }
+  }
+  const rows = (list || []).map(g => [
+    g.id,
+    g.name || '',
+    g.email || '',
+    g.subject || 'General Inquiry',
+    (g.message || '').replace(/\r?\n/g, ' '),
+    state.generalContactStatus?.[g.id] || 'PENDING_REPLY',
+    g.createdAt ? formatDateString(g.createdAt) : 'N/A'
+  ]);
+  downloadCSV('wellmindly-general-inquiries', ['Inquiry ID', 'Sender Name', 'Sender Email', 'Subject', 'Message Details', 'Resolution Status', 'Submission Date'], rows);
+};
+
+// 9. Feedback Reviews CSV
+window.exportFeedbackCSV = async function() {
+  let list = state.feedbacks;
+  if (!list || list.length === 0) {
+    try {
+      const res = await apiFetch('/feedbacks?page=1&limit=200');
+      if (res && res.feedbacks) list = res.feedbacks;
+    } catch (e) {
+      console.warn('Failed to prefetch feedbacks for CSV:', e);
+    }
+  }
+  const rows = (list || []).map(f => [
+    f.id,
+    f.student ? `${f.student.firstName || ''} ${f.student.lastName || ''}`.trim() : 'Anonymous Student',
+    f.student?.email || 'N/A',
+    f.rating ?? 5,
+    f.category || 'General Platform',
+    (f.comments || f.message || '').replace(/\r?\n/g, ' '),
+    f.createdAt ? formatDateString(f.createdAt) : 'N/A'
+  ]);
+  downloadCSV('wellmindly-student-feedbacks', ['Feedback ID', 'Student Name', 'Student Email', 'Rating (1-5)', 'Category', 'Comments', 'Submitted Date'], rows);
+};
+
+// 10. Dual Feedback Analytics CSV
+window.exportDualFeedbackCSV = async function() {
+  const sf = state.dualFeedback?.studentToCounselor || [];
+  const cf = state.dualFeedback?.counselorToStudent || [];
+
+  const rows = [
+    ...sf.map(s => [
+      'STUDENT_TO_COUNSELOR',
+      s.id,
+      s.session?.student ? `${s.session.student.firstName || ''} ${s.session.student.lastName || ''}`.trim() : 'Student',
+      s.counselor?.user ? formatCounselorDisplayName(s.counselor.user, s.counselor.credentials) : 'Counselor',
+      s.rating ?? 5,
+      (s.comments || '').replace(/\r?\n/g, ' '),
+      s.createdAt ? formatDateString(s.createdAt) : 'N/A'
+    ]),
+    ...cf.map(c => [
+      'COUNSELOR_TO_STUDENT',
+      c.id,
+      c.counselor?.user ? formatCounselorDisplayName(c.counselor.user, c.counselor.credentials) : 'Counselor',
+      c.session?.student ? `${c.session.student.firstName || ''} ${c.session.student.lastName || ''}`.trim() : 'Student',
+      c.rating ?? 5,
+      (c.summaryNote || '').replace(/\r?\n/g, ' '),
+      c.createdAt ? formatDateString(c.createdAt) : 'N/A'
+    ])
+  ];
+  downloadCSV('wellmindly-dual-clinical-evaluations', ['Evaluation Direction', 'Record ID', 'Evaluator', 'Recipient', 'Rating (1-5)', 'Clinical Feedback / Summary Note', 'Timestamp'], rows);
+};
+
+// 11. TalkMindly Safety & Moderation CSV
+window.exportTalkMindlyCSV = async function() {
+  const notes = state.flaggedData?.notes || [];
+  const replies = state.flaggedData?.replies || [];
+
+  const rows = [
+    ...notes.map(n => [
+      n.id,
+      'COMMUNITY_NOTE',
+      n.authorName || n.pseudonym || 'Anonymous Peer',
+      n.moderationStatus || (n.isFlagged ? 'FLAGGED_AUTO' : 'REVIEWED'),
+      n.flagReason || 'Content Safety Filter Triggered',
+      (n.content || '').replace(/\r?\n/g, ' '),
+      n.createdAt ? formatDateString(n.createdAt) : 'N/A'
+    ]),
+    ...replies.map(r => [
+      r.id,
+      'THREAD_REPLY',
+      r.authorName || r.pseudonym || 'Anonymous Peer',
+      r.moderationStatus || (r.isFlagged ? 'FLAGGED_AUTO' : 'REVIEWED'),
+      r.flagReason || 'Peer Safety Heuristics Triggered',
+      (r.content || '').replace(/\r?\n/g, ' '),
+      r.createdAt ? formatDateString(r.createdAt) : 'N/A'
+    ])
+  ];
+  downloadCSV('wellmindly-talkmindly-moderation-queue', ['Content ID', 'Type', 'Author / Alias', 'Status', 'Flag Reason', 'Content Snippet', 'Timestamp'], rows);
+};
+
+// 12. Student Access Control Rules CSV
+window.exportAccessControlCSV = async function() {
+  let domains = state.accessControl?.domains || [];
+  let bypassEmails = state.accessControl?.bypassEmails || [];
+
+  if (domains.length === 0 && bypassEmails.length === 0) {
+    try {
+      const res = await apiFetch('/admin/access-control');
+      if (res) {
+        domains = Array.isArray(res.domains) ? res.domains : [];
+        bypassEmails = Array.isArray(res.bypassEmails) ? res.bypassEmails : [];
+      }
+    } catch (e) {
+      console.warn('Failed to prefetch access control rules for CSV:', e);
+    }
+  }
+
+  const rows = [
+    ...domains.map(d => [
+      'ALLOWED_UNIVERSITY_DOMAIN',
+      d.domain || d,
+      d.notes || 'Institutional Campus Domain',
+      'ACTIVE_ELIGIBLE',
+      d.createdAt ? formatDateString(d.createdAt) : 'N/A'
+    ]),
+    ...bypassEmails.map(b => [
+      'BYPASS_STUDENT_EMAIL',
+      b.email || b,
+      b.reason || 'VIP / Support Testing Bypass',
+      'ACTIVE_ELIGIBLE',
+      b.createdAt ? formatDateString(b.createdAt) : 'N/A'
+    ])
+  ];
+  downloadCSV('wellmindly-student-access-control-rules', ['Rule Type', 'Rule Identifier (Domain / Email)', 'Description / Notes', 'Status', 'Created / Updated At'], rows);
+};
+
+window.initPolicyGuide = initPolicyGuide;
+window.downloadCSV = downloadCSV;
 
 
 
