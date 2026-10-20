@@ -1256,8 +1256,14 @@ function renderStudentsTable() {
 
   pageItems.forEach(student => {
     const row = document.createElement('tr');
-    const fullName = `${student.firstName} ${student.lastName}`;
-    const initials = `${student.firstName?.charAt(0) || 'S'}${student.lastName?.charAt(0) || 'D'}`.toUpperCase();
+    const rawFirst = student.firstName || student.user?.firstName || '';
+    const rawLast = student.lastName || student.user?.lastName || '';
+    let fullName = `${rawFirst} ${rawLast}`.trim();
+    if (!fullName) {
+      fullName = student.name || (student.email ? student.email.split('@')[0] : 'Student');
+    }
+    const initials = ((rawFirst ? rawFirst.charAt(0) : (student.email?.charAt(0) || 'S')) +
+                      (rawLast ? rawLast.charAt(0) : (rawFirst.length > 1 ? rawFirst.charAt(1) : 'T'))).toUpperCase();
     const uniName = student.university?.name || 'Self-Registered';
     const joinedDate = formatDateString(student.createdAt);
     const riskTier = computeStudentRiskTier(student);
@@ -1294,7 +1300,7 @@ function renderStudentsTable() {
       <td><span class="text-secondary" style="font-size: 12px;">${joinedDate}</span></td>
       <td class="text-right">
         <button class="btn-view-details" onclick="openStudentDetails('${student.id}')">
-          <i class="bx bx-folder-open"></i> Clinical Dossier
+          <i class="bx bx-user"></i> View Profile
         </button>
       </td>
     `;
@@ -1307,22 +1313,29 @@ function renderStudentsTable() {
   });
 }
 
-// ── STUDENT CLINICAL DOSSIER & LONGITUDINAL MOOD TRAJECTORY ─────────
+// ── STUDENT CLINICAL PROFILE & LONGITUDINAL MOOD TRAJECTORY ─────────
 async function openStudentDetails(studentId) {
-  showToast('Loading clinical dossier...', 'info', 1500);
+  showToast('Loading student profile...', 'info', 1500);
 
-  const student = await apiFetch(`/admin/students/${studentId}`);
-  if (!student) {
+  const res = await apiFetch(`/admin/students/${studentId}`);
+  if (!res) {
     showToast('Failed to retrieve student profile records', 'error');
     return;
   }
 
+  const student = res.student || res;
   state.activeStudentDetail = student;
   const modal = document.getElementById('modal-student');
   if (!modal) return;
 
-  const fullName = `${student.firstName} ${student.lastName}`;
-  const initials = `${student.firstName?.charAt(0) || 'S'}${student.lastName?.charAt(0) || 'D'}`.toUpperCase();
+  const rawFirst = student.firstName || student.user?.firstName || '';
+  const rawLast = student.lastName || student.user?.lastName || '';
+  let fullName = `${rawFirst} ${rawLast}`.trim();
+  if (!fullName) {
+    fullName = student.name || (student.email ? student.email.split('@')[0] : 'Student Profile');
+  }
+  const initials = ((rawFirst ? rawFirst.charAt(0) : (student.email?.charAt(0) || 'S')) +
+                    (rawLast ? rawLast.charAt(0) : (rawFirst.length > 1 ? rawFirst.charAt(1) : 'T'))).toUpperCase();
   const uniName = student.university?.name || 'Independent / Self-Registered';
   const uniDomain = student.university?.domain || (student.email ? student.email.split('@')[1] : 'Standard');
   const riskTier = computeStudentRiskTier(student);
@@ -1564,7 +1577,73 @@ function closeStudentModal() {
 }
 
 function exportStudentDossier() {
-  window.print();
+  const student = state.activeStudentDetail;
+  if (!student) {
+    showToast('No active student profile loaded', 'error');
+    return;
+  }
+  const rawFirst = student.firstName || student.user?.firstName || '';
+  const rawLast = student.lastName || student.user?.lastName || '';
+  const fullName = `${rawFirst} ${rawLast}`.trim() || student.name || (student.email ? student.email.split('@')[0] : 'Student');
+  const uniName = student.university?.name || 'Self-Registered';
+  const riskTier = computeStudentRiskTier(student);
+  const checkins = student.dailyCheckins || [];
+  const quizzes = student.quizResults || [];
+
+  const headers = ['Record Type', 'Student Name', 'Student Email', 'University', 'Date', 'Metric / Title', 'Value / Score', 'Classification / Notes'];
+  const rows = [];
+
+  // 1. Profile Summary
+  rows.push([
+    'PROFILE OVERVIEW',
+    fullName,
+    student.email || '',
+    uniName,
+    formatDateString(student.createdAt),
+    `Clinical Tier: ${riskTier}`,
+    `Total Check-ins: ${checkins.length}, Screenings: ${quizzes.length}`,
+    `Status: ${riskTier === 'CRITICAL' ? 'Critical Attention' : (riskTier === 'ELEVATED' ? 'Elevated Risk' : 'Stable')}`
+  ]);
+
+  // 2. Clinical Screenings
+  quizzes.forEach(q => {
+    const title = q.quiz?.title || 'Clinical Assessment';
+    const cat = q.quiz?.category || 'Mental Health';
+    let classification = 'Completed';
+    if (q.feedback?.headline) {
+      classification = q.feedback.headline;
+    } else if (typeof q.feedback === 'string') {
+      classification = q.feedback;
+    }
+    rows.push([
+      'SCREENING ASSESSMENT',
+      fullName,
+      student.email || '',
+      uniName,
+      formatDateString(q.completedAt || q.createdAt),
+      `${title} (${cat})`,
+      `${q.score} / ${q.quiz?.maxScore || 27}`,
+      classification
+    ]);
+  });
+
+  // 3. Daily Mood Logs
+  checkins.forEach(c => {
+    rows.push([
+      'DAILY MOOD LOG',
+      fullName,
+      student.email || '',
+      uniName,
+      formatDateString(c.createdAt),
+      `Mood Rating: ${c.moodRating || 3}/5`,
+      String(c.moodRating || 3),
+      c.feelings || c.note || 'Regular daily check-in'
+    ]);
+  });
+
+  const filename = `${fullName.toLowerCase().replace(/[^a-z0-9]/g, '_')}_profile_summary`;
+  downloadCSV(filename, headers, rows);
+  showToast(`Exported profile summary for ${fullName}`, 'success');
 }
 
 // Reusable Pagination Renderer
@@ -2558,8 +2637,8 @@ function renderUniversityContacts(totalCount = state.universityContacts.length) 
       <td><span style="font-size: 12px; color: rgba(255,255,255,0.5);">${formatDateString(item.createdAt)}</span></td>
       <td class="text-right">
         <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
-          <button class="btn-view-details" onclick="openInquiryDetails('university', '${item.id}')" title="Inspect Institutional Dossier">
-            <i class="bx bx-show"></i> Dossier
+          <button class="btn-view-details" onclick="openInquiryDetails('university', '${item.id}')" title="View Application Details">
+            <i class="bx bx-show"></i> Details
           </button>
           <a href="mailto:${escapeHtml(item.email)}?subject=WellMindly%20Campus%20Partnership%20Discussion" class="btn-view-details" style="background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.4); color: #818cf8; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="Send Direct Outreach Email">
             <i class="bx bx-envelope"></i> Email
@@ -2693,8 +2772,8 @@ function renderCounselorContacts(totalCount = state.counselorContacts.length) {
       <td><span style="font-size: 12px; color: rgba(255,255,255,0.5);">${formatDateString(item.createdAt)}</span></td>
       <td class="text-right">
         <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
-          <button class="btn-view-details" onclick="openInquiryDetails('counselor', '${item.id}')" title="Inspect Credential Dossier">
-            <i class="bx bx-show"></i> Dossier
+          <button class="btn-view-details" onclick="openInquiryDetails('counselor', '${item.id}')" title="View Application Details">
+            <i class="bx bx-show"></i> Details
           </button>
           <button class="btn-view-details" onclick="approveCounselorApplication('${item.id}')" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.5); color: #34d399;" title="Approve & Send Invitation Setup Email">
             <i class="bx bx-send"></i> Invite
@@ -2849,7 +2928,7 @@ function openInquiryDetails(type, id) {
 
   if (type === 'university') {
     item = state.universityContacts.find(u => u.id === id);
-    title = 'University Institutional Dossier';
+    title = 'University Partnership Application';
     subtitle = `Campus Partnership Lead: ${item?.universityName || 'Campus'}`;
     fields = [
       { label: 'Campus / Institution Name', value: item?.universityName },
@@ -3303,7 +3382,7 @@ function renderDualFeedback() {
           <td><span style="font-size: 12.5px; color: #cbd5e1; line-height: 1.4;">${escapeHtml(item.summaryNote || 'Clinical progress notes logged.')}</span></td>
           <td><span style="font-size: 12px; color: rgba(255,255,255,0.5);">${formatDateString(item.createdAt)}</span></td>
           <td class="text-right">
-            <button class="btn-view-details" onclick="showToast('Clinical progress entry archived in student dossier.', 'info')">
+            <button class="btn-view-details" onclick="showToast('Clinical progress entry saved in student profile.', 'info')">
               <i class="bx bx-file"></i> Clinical Log
             </button>
           </td>
@@ -4635,6 +4714,7 @@ window.closeCustomAlertModal = closeCustomAlertModal;
 window.openStudentDetails = openStudentDetails;
 window.closeStudentModal = closeStudentModal;
 window.exportStudentDossier = exportStudentDossier;
+window.exportStudentProfile = exportStudentDossier;
 window.openAssessmentSheet = openAssessmentSheet;
 window.closeAssessmentModal = closeAssessmentModal;
 window.openQuizDetails = openQuizDetails;
