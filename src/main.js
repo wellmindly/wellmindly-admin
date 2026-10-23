@@ -195,6 +195,23 @@ function setupEventHandlers() {
     });
   });
 
+  // Requires Attention & Dashboard Quick Shortcut Actions
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-tab]');
+    if (!btn) return;
+    if (btn.classList.contains('btn-shortcut') || btn.classList.contains('urgent-item') || btn.classList.contains('urgent-action-btn') || btn.closest('.urgent-widget')) {
+      const tabName = btn.getAttribute('data-tab');
+      if (tabName) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (tabName !== 'quizzes') {
+          closeQuizDetailView();
+        }
+        switchTab(tabName);
+      }
+    }
+  });
+
   // Logout Button
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) {
@@ -846,7 +863,7 @@ function renderUrgentActivityFeed(criticalCount) {
   }
 
   // 2. Pending Counselor Applications
-  const pendingCounselors = (state.counselorContacts || []).filter(c => !c.status || c.status === 'PENDING' || c.status === 'UNDER_REVIEW');
+  const pendingCounselors = (state.counselorContacts || []).filter(c => !c.stage || c.stage === 'NEW_APPLICATION' || c.status === 'PENDING' || c.status === 'UNDER_REVIEW');
   if (pendingCounselors.length > 0) {
     urgentItems.push({
       type: 'warning',
@@ -854,7 +871,7 @@ function renderUrgentActivityFeed(criticalCount) {
       title: `${pendingCounselors.length} Counselor Application${pendingCounselors.length > 1 ? 's' : ''} Pending`,
       meta: `Latest from ${pendingCounselors[0].name || pendingCounselors[0].firstName || 'Applicant'}`,
       tab: 'counselors',
-      actionText: 'Verify Apps'
+      actionText: 'Review Apps'
     });
   }
 
@@ -864,10 +881,23 @@ function renderUrgentActivityFeed(criticalCount) {
     urgentItems.push({
       type: 'info',
       icon: 'bx-school',
-      title: `${pendingUni.length} University Collaboration Inquiry`,
+      title: `${pendingUni.length} University Partnership Inquiry`,
       meta: `From ${pendingUni[0].institutionName || pendingUni[0].universityName || 'Campus Administration'}`,
       tab: 'university',
-      actionText: 'View Request'
+      actionText: 'View Inquiries'
+    });
+  }
+
+  // 4. General Support Contacts Pending Reply
+  const pendingGeneral = (state.generalContacts || []).filter(g => (state.generalContactStatus[g.id] || 'PENDING_REPLY') === 'PENDING_REPLY');
+  if (pendingGeneral.length > 0) {
+    urgentItems.push({
+      type: 'info',
+      icon: 'bx-envelope',
+      title: `${pendingGeneral.length} General Inquiry Pending Reply`,
+      meta: `From ${pendingGeneral[0].name || 'Visitor'} (${pendingGeneral[0].email})`,
+      tab: 'contacts',
+      actionText: 'Open Inbox'
     });
   }
 
@@ -881,14 +911,25 @@ function renderUrgentActivityFeed(criticalCount) {
     feedContainer.innerHTML = `
       <div class="urgent-empty-state">
         <i class="bx bx-check-double"></i>
-        <p>All clinical systems steady. No pending triage alerts or unreviewed applications.</p>
+        <p style="margin-bottom: 10px;">All clinical systems steady. No pending triage alerts.</p>
+        <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px;">
+          <button type="button" class="urgent-action-btn" data-tab="students" style="padding: 6px 12px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa;">
+            <i class="bx bxs-user-detail"></i> View Students
+          </button>
+          <button type="button" class="urgent-action-btn" data-tab="counselors" style="padding: 6px 12px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399;">
+            <i class="bx bxs-user-voice"></i> Counselor Apps
+          </button>
+          <button type="button" class="urgent-action-btn" data-tab="master-calendar" style="padding: 6px 12px; background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3); color: #c084fc;">
+            <i class="bx bxs-calendar"></i> Master Calendar
+          </button>
+        </div>
       </div>
     `;
     return;
   }
 
   feedContainer.innerHTML = urgentItems.map(item => `
-    <div class="urgent-item ${item.type}" data-tab="${item.tab}" style="cursor: pointer;" onclick="switchTab('${item.tab}')" title="Click to open ${escapeHtml(item.tab)}">
+    <div class="urgent-item ${item.type}" data-tab="${item.tab}" style="cursor: pointer;" title="Click to open ${escapeHtml(item.tab)}">
       <div class="urgent-item-info">
         <div class="urgent-item-icon">
           <i class="bx ${item.icon}"></i>
@@ -898,7 +939,7 @@ function renderUrgentActivityFeed(criticalCount) {
           <div class="urgent-item-meta">${escapeHtml(item.meta)}</div>
         </div>
       </div>
-      <button class="urgent-action-btn" data-tab="${item.tab}" onclick="event.stopPropagation(); switchTab('${item.tab}')">${item.actionText}</button>
+      <button type="button" class="urgent-action-btn" data-tab="${item.tab}">${item.actionText}</button>
     </div>
   `).join('');
 }
@@ -1005,14 +1046,33 @@ function renderOverviewCharts() {
     const severityValues = Object.values(severityMap);
     
     // Distinct vibrant clinical colors palette
-    const clinicalPalette = ['#06B6D4', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#3B82F6', '#14B8A6', '#F97316', '#6366F1'];
-    const severityColors = severityLabels.map((label, idx) => {
+    const clinicalPalette = ['#06B6D4', '#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#F97316', '#EF4444', '#EC4899', '#14B8A6', '#6366F1'];
+    const severityColors = [];
+    const usedColors = new Set();
+
+    severityLabels.forEach((label, idx) => {
       const l = label.toLowerCase();
-      if (l.includes('severe') || l.includes('distress') || l.includes('critical') || l.includes('high')) return '#EF4444'; // Red
-      if (l.includes('moderate') || l.includes('elevated')) return '#F59E0B'; // Amber
-      if (l.includes('mild') || l.includes('steady')) return '#10B981'; // Emerald
-      if (l.includes('minimal') || l.includes('low') || l.includes('doing well') || l.includes('stable')) return '#06B6D4'; // Teal
-      return clinicalPalette[idx % clinicalPalette.length];
+      let assignedColor = null;
+
+      if (l.includes('minimal') || l.includes('low') || l.includes('doing well') || l.includes('stable')) {
+        assignedColor = '#06B6D4'; // Cyan/Teal
+      } else if (l.includes('mild') || l.includes('steady')) {
+        assignedColor = '#10B981'; // Emerald
+      } else if (l.includes('moderately severe')) {
+        assignedColor = '#F97316'; // Orange
+      } else if (l.includes('moderate') || l.includes('elevated')) {
+        assignedColor = '#F59E0B'; // Amber
+      } else if (l.includes('severe') || l.includes('distress') || l.includes('critical')) {
+        assignedColor = '#EF4444'; // Red
+      }
+
+      // If the color is already taken by another slice, pick the next unique color from clinicalPalette
+      if (!assignedColor || usedColors.has(assignedColor)) {
+        assignedColor = clinicalPalette.find(c => !usedColors.has(c)) || clinicalPalette[idx % clinicalPalette.length];
+      }
+
+      usedColors.add(assignedColor);
+      severityColors.push(assignedColor);
     });
 
     const displayLabels = severityLabels.length ? severityLabels : ['Minimal Severity', 'Mild Wellbeing', 'Moderate Elevated', 'Severe Distress'];
@@ -2752,13 +2812,22 @@ function renderCounselorContacts(totalCount = state.counselorContacts.length) {
       </td>
       <td>
         ${stage === 'DOCS_REQUESTED' ? `
-          <span class="badge" style="font-size: 11px; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); padding: 3px 8px; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
-            <i class="bx bx-file-find"></i> Docs Requested
-          </span>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span class="badge" style="font-size: 11px; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); padding: 3px 8px; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; width: fit-content;">
+              <i class="bx bx-file-find"></i> Docs Requested
+            </span>
+            <span style="font-size: 10px; color: #fde68a;">
+              ${(item.details?.requestedDocs || ['Degree Certificate', 'Identity Document', 'Practice Standing License']).join(', ')}
+            </span>
+            ${item.stageUpdatedAt ? `<span style="font-size: 9.5px; color: rgba(255,255,255,0.4);">Sent: ${formatDateString(item.stageUpdatedAt)}</span>` : ''}
+          </div>
         ` : stage === 'INVITE_SENT' ? `
-          <span class="badge" style="font-size: 11px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 3px 8px; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
-            <i class="bx bx-paper-plane"></i> Invite Sent
-          </span>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span class="badge" style="font-size: 11px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 3px 8px; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; width: fit-content;">
+              <i class="bx bx-paper-plane"></i> Invite Sent
+            </span>
+            ${item.stageUpdatedAt ? `<span style="font-size: 9.5px; color: rgba(255,255,255,0.4);">Sent: ${formatDateString(item.stageUpdatedAt)}</span>` : ''}
+          </div>
         ` : stage === 'ONBOARDED' ? `
           <span class="badge" style="font-size: 11px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 3px 8px; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
             <i class="bx bx-check-shield"></i> Active Counselor
@@ -3042,6 +3111,27 @@ function openInquiryDetails(type, id) {
         <div style="flex: 1; height: 4px; border-radius: 2px; background: ${['INVITE_SENT', 'ONBOARDED'].includes(currentStage) ? '#60a5fa' : 'rgba(255,255,255,0.1)'};" title="Step 3: Portal Registration Invite Sent"></div>
         <div style="flex: 1; height: 4px; border-radius: 2px; background: ${currentStage === 'ONBOARDED' ? '#34d399' : 'rgba(255,255,255,0.1)'};" title="Step 4: Active Registered Counselor"></div>
       </div>
+      ${currentStage === 'DOCS_REQUESTED' ? `
+        <div style="margin-top: 12px; padding: 10px 12px; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 8px;">
+          <div style="font-size: 11px; font-weight: 700; color: #fbbf24; text-transform: uppercase; margin-bottom: 6px;">
+            <i class='bx bx-list-check'></i> Requested Verification Documents
+          </div>
+          <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: #fde68a;">
+            ${(item.details?.requestedDocs || ['Degree Certificate', 'Identity Document', 'Practice Standing License']).map(d => `<li>${escapeHtml(d)}</li>`).join('')}
+          </ul>
+          ${item.stageUpdatedAt ? `<div style="margin-top: 6px; font-size: 10px; color: rgba(255,255,255,0.4);">Dispatched on: ${formatDateString(item.stageUpdatedAt)}</div>` : ''}
+        </div>
+      ` : currentStage === 'INVITE_SENT' ? `
+        <div style="margin-top: 12px; padding: 10px 12px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 8px;">
+          <div style="font-size: 11px; font-weight: 700; color: #60a5fa; text-transform: uppercase; margin-bottom: 4px;">
+            <i class='bx bx-mail-send'></i> Invitation Dispatched
+          </div>
+          <div style="font-size: 12px; color: #bfdbfe;">
+            Applicant was sent an activation invitation link to complete counselor portal profile registration.
+          </div>
+          ${item.stageUpdatedAt ? `<div style="margin-top: 6px; font-size: 10px; color: rgba(255,255,255,0.4);">Invitation sent on: ${formatDateString(item.stageUpdatedAt)}</div>` : ''}
+        </div>
+      ` : ''}
     `;
     container.appendChild(stageBox);
   }
@@ -3925,47 +4015,6 @@ window.toggleCounselorStatus = async function(id, newStatus) {
   }
 };
 
-// Counselor Application Approval & Invitation Dispatch
-window.approveCounselorApplication = async function(applicationId) {
-  const item = state.counselorContacts.find(c => c.id === applicationId);
-  if (!item) {
-    showToast('Application not found.', 'error');
-    return;
-  }
-
-  const nameParts = (item.name || 'Counselor').trim().split(' ');
-  const firstName = nameParts[0] || 'Counselor';
-  const lastName = nameParts.slice(1).join(' ') || 'Staff';
-  const email = item.email;
-
-  if (!confirm(`Approve application and dispatch registration invitation email to:\n\n${firstName} ${lastName} (${email})?`)) return;
-
-  try {
-    showToast('Dispatching counselor onboarding invite...', 'info');
-    const res = await apiPost('/v1/admin/counselors/invite', { firstName, lastName, email });
-    if (res && res.success) {
-      const setupUrl = res.data?.setupUrl || '';
-      showToast(`Invitation sent successfully to ${email}!`, 'success');
-      closeInquiryModal();
-      fetchCounselorContacts();
-      fetchAdminCounselors();
-    } else {
-      showToast(res?.error?.message || 'Failed to dispatch invitation.', 'error');
-    }
-  } catch (err) {
-    console.error('Approve counselor error:', err);
-    showToast('Failed to approve counselor.', 'error');
-  }
-};
-
-// Request Additional Verification Documents
-window.requestCounselorDocs = function(applicationId) {
-  const item = state.counselorContacts.find(c => c.id === applicationId);
-  if (!item) return;
-
-  showToast(`Document request dispatch queued for ${item.name} (${item.email}).`, 'info');
-};
-
 // Toggle Invite Counselor Card Form
 document.addEventListener('DOMContentLoaded', () => {
   const btnOpen = document.getElementById('btn-open-invite-counselor');
@@ -4095,6 +4144,8 @@ window.requestCounselorDocs = async function(id) {
     if (item) {
       item.stage = 'DOCS_REQUESTED';
       item.stageUpdatedAt = new Date().toISOString();
+      if (!item.details) item.details = {};
+      item.details.requestedDocs = ['Degree Certificate', 'Identity Document', 'Practice Standing License'];
     }
     renderCounselorContacts();
     showToast(res.message || `Document request email sent to ${item?.email || 'applicant'}`, 'success');
@@ -4179,19 +4230,6 @@ function formatCounselorDisplayName(user, credentials = '') {
   const first = user?.firstName || '';
   const last = user?.lastName || '';
   const fullName = `${first} ${last}`.trim() || user?.name || 'Counselor';
-
-  // Check if already prefixed with Dr.
-  if (/^dr\.?\s+/i.test(fullName)) {
-    return fullName;
-  }
-
-  // Check if user holds a doctoral degree / doctorate in credentials or name
-  const textToCheck = `${fullName} ${credentials}`.toLowerCase();
-  const isDoctor = /\b(ph\.?d|psy\.?d|m\.?d|doctor)\b/i.test(textToCheck);
-
-  if (isDoctor) {
-    return `Dr. ${fullName}`;
-  }
   return fullName;
 }
 
@@ -4211,16 +4249,14 @@ async function fetchAdminMasterCalendar() {
     state.masterCalendarSessions = [];
   }
 
-  // Ensure counselors are available for availability grid and reschedule dropdown
-  if (!state.counselors || state.counselors.length === 0) {
-    try {
-      const counsRes = await apiFetch('/v1/admin/counselors');
-      if (counsRes && counsRes.data) {
-        state.counselors = counsRes.data;
-      }
-    } catch (e) {
-      console.warn('Could not fetch counselors for calendar:', e);
+  // Always refresh counselors so status (e.g. SUSPENDED) is 100% accurate
+  try {
+    const counsRes = await apiFetch('/v1/admin/counselors');
+    if (counsRes && counsRes.data) {
+      state.counselors = counsRes.data;
     }
+  } catch (e) {
+    console.warn('Could not fetch counselors for calendar:', e);
   }
 
   renderMasterCalendar();
@@ -4277,11 +4313,20 @@ function renderCounselorAvailabilitySlots() {
       };
     });
   } else {
-    // Derive active counselors from session records
+    // Derive active counselors from session records, strictly omitting suspended ones
+    const suspendedSet = new Set(
+      (state.counselors || [])
+        .filter(c => c.status === 'SUSPENDED' || c.status === 'INACTIVE')
+        .flatMap(c => [c.id, c.userId, c.user?.id].filter(Boolean))
+    );
+
     const cMap = new Map();
     sessions.forEach((s, i) => {
       if (s.counselor) {
         const cId = s.counselor.id || s.counselorId || ('c-' + i);
+        const isSuspended = s.counselor.status === 'SUSPENDED' || s.counselor.status === 'INACTIVE' || suspendedSet.has(s.counselor.id) || suspendedSet.has(s.counselor.userId);
+        if (isSuspended) return;
+
         if (!cMap.has(cId)) {
           const u = s.counselor.user;
           const name = formatCounselorDisplayName(u, s.counselor?.credentials);
