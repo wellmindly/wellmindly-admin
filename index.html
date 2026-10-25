@@ -2,45 +2,52 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="icon" type="image/png" href="./favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WellMindly | Admin & Clinical Command Center</title>
-    <!-- Google Fonts: Outfit -->
+    <!-- Google Fonts: Outfit & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <!-- Boxicons for Icons -->
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
     <!-- Chart.js CDN for Visual Analytics -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" crossorigin src="/assets/index-Cv_gdlPK.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-Bo3spht-.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module" crossorigin src="./assets/index-og4n8HM9.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-D1mh4f_T.css">
   </head>
   <body>
     <!-- 1. Authentication Login Screen -->
     <div id="login-container" class="auth-wrapper">
+      <div class="auth-ambient-glow"></div>
       <div class="glass-auth-card">
         <div class="auth-header">
           <div class="logo-circle">
-            <i class="bx bxs-shield"></i>
+            <i class="bx bxs-shield-plus"></i>
           </div>
           <h1>WellMindly</h1>
-          <p>Administrative Control Center</p>
+          <p>Administrative & Clinical Command Center</p>
+          <span class="auth-badge-role"><i class="bx bx-lock-alt"></i> Clinical Admin Access</span>
         </div>
         <form id="login-form">
           <div class="form-group">
             <label for="email"><i class="bx bx-envelope"></i> Email Address</label>
-            <input type="email" id="email" required placeholder="admin@wellmindly.com" value="admin@wellmindly.com" />
+            <input type="email" id="email" required placeholder="admin@wellmindly.com" autocomplete="username" />
           </div>
           <div class="form-group">
-            <label for="password"><i class="bx bx-lock-alt"></i> Password</label>
-            <input type="password" id="password" required placeholder="••••••••" value="AdminPass123!" />
+            <label for="password"><i class="bx bx-lock-alt"></i> Master Password</label>
+            <div class="input-with-action">
+              <input type="password" id="password" required placeholder="••••••••" autocomplete="current-password" />
+              <button type="button" id="btn-toggle-login-pwd" class="btn-toggle-pwd" title="Toggle password visibility">
+                <i class="bx bx-show" id="icon-toggle-login-pwd"></i>
+              </button>
+            </div>
           </div>
           <div id="login-error" class="error-banner hidden">
             <i class="bx bx-error-circle"></i> <span id="error-message">Invalid credentials.</span>
           </div>
-          <button type="submit" class="btn-auth">
-            <span>Access Portal</span>
+          <button type="submit" id="btn-submit-login" class="btn-auth">
+            <span>Enter Command Center</span>
             <i class="bx bx-right-arrow-alt"></i>
           </button>
         </form>
@@ -49,60 +56,84 @@
 
     <!-- 2. Main Admin Dashboard -->
     <div id="app-container" class="app-layout hidden">
+      <!-- Mobile Sidebar Backdrop Overlay -->
+      <div id="sidebar-backdrop" class="sidebar-backdrop hidden"></div>
+
       <!-- Sidebar Navigation -->
-      <aside class="sidebar-aside">
+      <aside class="sidebar-aside" id="sidebar-aside">
         <div class="sidebar-logo">
-          <i class="bx bxs-heart-circle"></i>
-          <span class="logo-text">WellMindly</span>
+          <div class="sidebar-logo-icon">
+            <i class="bx bxs-heart-circle"></i>
+          </div>
+          <div class="flex-col">
+            <span class="logo-text">WellMindly</span>
+            <span style="font-size: 10px; color: var(--color-emerald); font-weight: 700; letter-spacing: 0.5px;">COMMAND CENTER</span>
+          </div>
           <span class="badge-role">ADMIN</span>
         </div>
         
         <nav class="sidebar-nav">
+          <div class="nav-section-title">Clinical & Intelligence</div>
           <button class="nav-item active" data-tab="overview">
             <i class="bx bxs-dashboard"></i>
             <span>Overview</span>
           </button>
-          <button class="nav-item" data-tab="university">
-            <i class="bx bxs-school"></i>
-            <span>University Requests</span>
-          </button>
-          <button class="nav-item" data-tab="counselors">
-            <i class="bx bxs-user-voice"></i>
-            <span>Counselor Apps</span>
-          </button>
-          <button class="nav-item" data-tab="contacts">
-            <i class="bx bxs-contact"></i>
-            <span>General Contacts</span>
-          </button>
-          <button class="nav-item" data-tab="moderation">
-            <i class="bx bxs-message-rounded-dots"></i>
-            <span>TalkMindly Moderation</span>
-          </button>
           <button class="nav-item" data-tab="students">
             <i class="bx bxs-user-detail"></i>
-            <span>Students</span>
+            <span>Student Registry</span>
           </button>
           <button class="nav-item" data-tab="quizzes">
             <i class="bx bxs-book-heart"></i>
-            <span>Quizzes</span>
+            <span>Assessments Hub</span>
           </button>
-          <button class="nav-item" data-tab="feedback">
-            <i class="bx bxs-star-half"></i>
-            <span>Feedback</span>
+          <button class="nav-item" data-tab="moderation">
+            <i class="bx bxs-shield-quarter"></i>
+            <span>TalkMindly Safety</span>
+          </button>
+
+          <div class="nav-section-title">Counselor Operations</div>
+          <button class="nav-item" data-tab="counselors">
+            <i class="bx bxs-user-plus"></i>
+            <span>Counselor Apps</span>
           </button>
           <button class="nav-item" data-tab="counselor-mgmt">
             <i class="bx bxs-user-badge"></i>
-            <span>Counselors Portal</span>
+            <span>Counselor Directory</span>
           </button>
           <button class="nav-item" data-tab="master-calendar">
-            <i class="bx bxs-calendar"></i>
+            <i class="bx bxs-calendar-event"></i>
             <span>Master Calendar</span>
           </button>
           <button class="nav-item" data-tab="dual-feedback">
             <i class="bx bxs-message-alt-detail"></i>
             <span>Dual Feedback</span>
           </button>
+
+          <div class="nav-section-title">Inquiries & Partnerships</div>
+          <button class="nav-item" data-tab="university">
+            <i class="bx bxs-school"></i>
+            <span>University Requests</span>
+          </button>
+          <button class="nav-item" data-tab="contacts">
+            <i class="bx bxs-contact"></i>
+            <span>General Contacts</span>
+          </button>
+          <button class="nav-item" data-tab="feedback">
+            <i class="bx bxs-star-half"></i>
+            <span>Feedback Analytics</span>
+          </button>
+
+          <div class="nav-section-title">Access & Governance</div>
+          <button class="nav-item" data-tab="access-control">
+            <i class="bx bxs-key"></i>
+            <span>Access Control</span>
+          </button>
+          <button class="nav-item" data-tab="policies">
+            <i class="bx bxs-book-content"></i>
+            <span>Policy Guide</span>
+          </button>
         </nav>
+
 
         <div class="sidebar-footer">
           <div class="user-profile">
@@ -112,7 +143,7 @@
               <p class="profile-email">admin@wellmindly.com</p>
             </div>
           </div>
-          <button id="logout-btn" class="btn-logout" title="Logout">
+          <button id="logout-btn" class="btn-logout" title="Sign Out">
             <i class="bx bx-log-out-circle"></i>
             <span>Sign Out</span>
           </button>
@@ -123,9 +154,19 @@
       <main class="main-viewport">
         <!-- Top Bar Header -->
         <header class="top-header">
-          <div class="header-title-area">
-            <h2 id="view-title">Dashboard Overview</h2>
-            <p id="view-subtitle" class="text-secondary">Summary and trends across WellMindly students.</p>
+          <div class="header-left-group">
+            <button id="btn-mobile-sidebar-toggle" class="btn-hamburger" title="Toggle Menu">
+              <i class="bx bx-menu"></i>
+            </button>
+            <div class="header-title-area">
+              <div class="header-breadcrumbs">
+                <span>WellMindly</span>
+                <i class="bx bx-chevron-right"></i>
+                <span id="breadcrumb-current-tab" class="active">Overview</span>
+              </div>
+              <h2 id="view-title">Dashboard Overview</h2>
+              <p id="view-subtitle" class="text-secondary">Summary and trends across WellMindly students.</p>
+            </div>
           </div>
           <div class="header-actions">
             <div class="refresh-indicator">
@@ -140,66 +181,174 @@
           
           <!-- TAB: Overview -->
           <div id="tab-overview" class="tab-pane">
-            <!-- KPI Summary Cards -->
+            <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 16px;">
+              <button type="button" class="btn-secondary small" onclick="exportDashboardSummaryCSV()">
+                <i class="bx bx-download"></i>
+                <span>Export Dashboard KPIs CSV</span>
+              </button>
+            </div>
+            <!-- 1. Executive KPI Summary Cards -->
             <div class="kpi-grid">
+              <!-- Card 1: Total Students -->
               <div class="kpi-card glow-card">
-                <div class="kpi-icon icon-blue"><i class="bx bxs-group"></i></div>
+                <div class="kpi-card-header">
+                  <div class="kpi-icon icon-emerald"><i class="bx bxs-user-detail"></i></div>
+                  <span class="kpi-badge badge-growth"><i class="bx bx-trending-up"></i> +14%</span>
+                </div>
                 <div class="kpi-data">
-                  <h3>Total Students</h3>
+                  <h3>Registered Students</h3>
                   <p class="kpi-value" id="kpi-students">-</p>
-                  <p class="kpi-meta text-emerald"><i class="bx bx-trending-up"></i> Active directory</p>
+                  <p class="kpi-meta"><i class="bx bx-check-circle"></i> Active student directory</p>
                 </div>
               </div>
+
+              <!-- Card 2: Active Counselors -->
               <div class="kpi-card glow-card">
-                <div class="kpi-icon icon-plum"><i class="bx bxs-file-blank"></i></div>
+                <div class="kpi-card-header">
+                  <div class="kpi-icon icon-plum"><i class="bx bxs-user-badge"></i></div>
+                  <span class="kpi-badge badge-plum"><i class="bx bx-shield-quarter"></i> Staff</span>
+                </div>
                 <div class="kpi-data">
-                  <h3>Quiz Submissions</h3>
+                  <h3>Active Counselors</h3>
+                  <p class="kpi-value" id="kpi-counselors">-</p>
+                  <p class="kpi-meta"><i class="bx bx-certification"></i> Licensed clinical team</p>
+                </div>
+              </div>
+
+              <!-- Card 3: Total Screenings -->
+              <div class="kpi-card glow-card">
+                <div class="kpi-card-header">
+                  <div class="kpi-icon icon-teal"><i class="bx bxs-book-heart"></i></div>
+                  <span class="kpi-badge badge-teal"><i class="bx bx-pulse"></i> Screenings</span>
+                </div>
+                <div class="kpi-data">
+                  <h3>Total Assessments</h3>
                   <p class="kpi-value" id="kpi-submissions">-</p>
-                  <p class="kpi-meta text-secondary">All assessment types</p>
+                  <p class="kpi-meta"><i class="bx bx-data"></i> PHQ-9, GAD-7 & check-ins</p>
                 </div>
               </div>
-              <div class="kpi-card glow-card">
-                <div class="kpi-icon icon-green"><i class="bx bxs-smile"></i></div>
-                <div class="kpi-data">
-                  <h3>Avg Daily Mood</h3>
-                  <p class="kpi-value" id="kpi-mood">-</p>
-                  <p class="kpi-meta text-secondary">Ratings 1-5 scale</p>
+
+              <!-- Card 4: Crisis / High Distress Alerts -->
+              <div class="kpi-card glow-card border-critical-glow">
+                <div class="kpi-card-header">
+                  <div class="kpi-icon icon-critical"><i class="bx bxs-error-alt"></i></div>
+                  <span class="kpi-badge badge-critical pulse-badge"><i class="bx bx-error-circle"></i> Attention</span>
                 </div>
-              </div>
-              <div class="kpi-card glow-card border-critical">
-                <div class="kpi-icon icon-critical"><i class="bx bxs-error-alt"></i></div>
                 <div class="kpi-data">
                   <h3>Critical Alerts</h3>
                   <p class="kpi-value text-critical" id="kpi-critical">-</p>
-                  <p class="kpi-meta text-secondary" style="font-size: 10px; line-height: 1.2; margin-top: 4px;">Severe concern cases flagged</p>
+                  <p class="kpi-meta text-critical-subtle"><i class="bx bx-bell"></i> High-distress flags flagged</p>
                 </div>
               </div>
             </div>
 
-            <!-- Charts Section -->
-            <div class="dashboard-charts">
-              <div class="chart-container glass-card">
-                <h3>Submission Volume Over Time</h3>
-                <p class="chart-subtitle">Daily count of completed student self-reflections</p>
-                <div class="canvas-wrapper">
-                  <canvas id="chart-submissions"></canvas>
+            <!-- 2. Executive Analytics & Operational Feed Grid -->
+            <div class="overview-analytics-grid">
+              <!-- Left Analytics Column -->
+              <div class="analytics-main-col">
+                <!-- Submissions Velocity Line Chart -->
+                <div class="chart-container glass-card">
+                  <div class="chart-card-header">
+                    <div>
+                      <div class="flex-row gap-8 items-center">
+                        <span class="chart-tag-pill emerald">Telemetry</span>
+                        <h3>Assessment Submission Velocity</h3>
+                      </div>
+                      <p class="chart-subtitle">Daily count of completed student self-reflections & clinical screenings</p>
+                    </div>
+                    <div class="chart-header-stat">
+                      <span class="stat-label">Daily Avg</span>
+                      <span class="stat-value" id="stat-daily-avg">-</span>
+                    </div>
+                  </div>
+                  <div class="canvas-wrapper">
+                    <canvas id="chart-submissions"></canvas>
+                  </div>
                 </div>
-              </div>
-              <div class="chart-container glass-card">
-                <h3>Clinical Severity Distribution</h3>
-                <p class="chart-subtitle">Breakdown of student classifications (Wellbeing screenings)</p>
-                <div class="canvas-wrapper flex-center">
-                  <canvas id="chart-severity"></canvas>
-                </div>
-              </div>
-            </div>
 
-            <div class="dashboard-charts mt-24">
-              <div class="chart-container glass-card full-width">
-                <h3>Daily Check-in Mood Distribution</h3>
-                <p class="chart-subtitle">Frequency of emotional ratings (1=Struggling to 5=Excellent)</p>
-                <div class="canvas-wrapper">
-                  <canvas id="chart-moods"></canvas>
+                <!-- 28-Day Mood Trajectory Bar Chart -->
+                <div class="chart-container glass-card mt-20">
+                  <div class="chart-card-header">
+                    <div>
+                      <div class="flex-row gap-8 items-center">
+                        <span class="chart-tag-pill teal">Sentiment</span>
+                        <h3>Daily Emotional Check-in Distribution</h3>
+                      </div>
+                      <p class="chart-subtitle">Frequency of emotional ratings across all active student check-in logs</p>
+                    </div>
+                    <div class="chart-header-stat">
+                      <span class="stat-label">Avg Mood Score</span>
+                      <span class="stat-value text-emerald" id="kpi-mood">—</span>
+                    </div>
+                  </div>
+                  <div class="canvas-wrapper">
+                    <canvas id="chart-moods"></canvas>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Operational & Intelligence Column -->
+              <div class="analytics-side-col">
+                <!-- Clinical Severity Donut Chart -->
+                <div class="chart-container glass-card">
+                  <div class="chart-card-header">
+                    <div>
+                      <div class="flex-row gap-8 items-center">
+                        <span class="chart-tag-pill plum">Clinical Breakdown</span>
+                        <h3>Severity Distribution</h3>
+                      </div>
+                      <p class="chart-subtitle">Classifications across evaluated student screenings</p>
+                    </div>
+                  </div>
+                  <div class="canvas-wrapper flex-center donut-wrapper">
+                    <canvas id="chart-severity"></canvas>
+                  </div>
+                </div>
+
+                <!-- Immediate Attention & Urgent Activity Ticker -->
+                <div class="urgent-widget glass-card mt-20">
+                  <div class="widget-header">
+                    <div class="flex-row gap-8 items-center">
+                      <div class="urgent-pulse-indicator"></div>
+                      <h3 style="font-size: 15px; font-weight: 700; color: white;">Requires Attention</h3>
+                    </div>
+                    <span class="urgent-count-badge" id="urgent-pending-count">0 Action Items</span>
+                  </div>
+                  <p class="widget-subtitle">Real-time triage items, pending counselor applications & inquiries</p>
+                  
+                  <div class="urgent-items-list" id="urgent-activity-feed">
+                    <div class="urgent-empty-state">
+                      <i class="bx bx-check-double"></i>
+                      <p>All clear. No urgent crisis flags or pending applications.</p>
+                    </div>
+                  </div>
+
+                  <!-- Quick Action Admin Shortcuts -->
+                  <div class="quick-shortcuts-section">
+                    <p class="shortcuts-title">Quick Actions</p>
+                    <div class="shortcuts-grid">
+                      <button class="btn-shortcut" data-tab="students" onclick="switchTab('students')">
+                        <i class="bx bxs-user-detail"></i>
+                        <span>Student Registry</span>
+                      </button>
+                      <button class="btn-shortcut" data-tab="counselors" onclick="switchTab('counselors')">
+                        <i class="bx bxs-user-voice"></i>
+                        <span>Review Apps</span>
+                      </button>
+                      <button class="btn-shortcut" data-tab="master-calendar" onclick="switchTab('master-calendar')">
+                        <i class="bx bxs-calendar-check"></i>
+                        <span>Master Calendar</span>
+                      </button>
+                      <button class="btn-shortcut" data-tab="moderation" onclick="switchTab('moderation')">
+                        <i class="bx bxs-shield-quarter"></i>
+                        <span>Safety Moderation</span>
+                      </button>
+                      <button class="btn-shortcut" data-tab="policies" onclick="switchTab('policies')">
+                        <i class="bx bxs-book-content"></i>
+                        <span>Policy Guide</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -207,20 +356,40 @@
 
           <!-- TAB: Students -->
           <div id="tab-students" class="tab-pane hidden">
+            <!-- Filter Suite -->
             <div class="filter-bar glass-card">
               <div class="search-box">
                 <i class="bx bx-search"></i>
-                <input type="text" id="search-student" placeholder="Search by name, email, or university..." />
+                <input type="text" id="search-student" placeholder="Search student name, email, or domain..." />
+              </div>
+              <div class="filter-group">
+                <select id="filter-student-university" class="form-select">
+                  <option value="">All Universities & Domains</option>
+                  <!-- Populated dynamically -->
+                </select>
+                <select id="filter-student-risk" class="form-select">
+                  <option value="">All Clinical Statuses</option>
+                  <option value="CRITICAL">Critical Attention (Severe)</option>
+                  <option value="ELEVATED">Elevated (Moderate)</option>
+                  <option value="STABLE">Stable / Active</option>
+                </select>
+                <button type="button" class="btn-secondary" onclick="exportStudentsCSV()" style="white-space: nowrap;">
+                  <i class="bx bx-download"></i>
+                  <span>Export CSV</span>
+                </button>
               </div>
             </div>
 
+            <!-- Students Data Table -->
             <div class="table-container glass-card">
               <table id="students-table" class="data-table">
                 <thead>
                   <tr>
-                    <th>Student Name</th>
+                    <th>Student</th>
                     <th>Email Address</th>
-                    <th>University Domain</th>
+                    <th>University / Domain</th>
+                    <th>Streak & Activity</th>
+                    <th>Clinical Risk Status</th>
                     <th>Joined Date</th>
                     <th class="text-right">Actions</th>
                   </tr>
@@ -300,6 +469,10 @@
                         <option value="moderate">Moderate</option>
                         <option value="severe">Severe</option>
                       </select>
+                      <button type="button" class="btn-secondary" onclick="exportAssessmentsCSV()" style="white-space: nowrap;">
+                        <i class="bx bx-download"></i>
+                        <span>Export CSV</span>
+                      </button>
                     </div>
                   </div>
 
@@ -328,39 +501,129 @@
             </div>
           </div>
 
-          <!-- TAB: Feedback -->
+          <!-- TAB: Feedback (Platform & Assessment Analytics) -->
           <div id="tab-feedback" class="tab-pane hidden">
+            <!-- Feedback KPI Strip -->
             <div class="kpi-grid">
               <div class="kpi-card glow-card">
                 <div class="kpi-icon icon-plum"><i class="bx bxs-star"></i></div>
                 <div class="kpi-data">
-                  <h3>Average Assessment Rating</h3>
+                  <h3>Average Rating</h3>
                   <p class="kpi-value" id="feedback-avg-rating">-</p>
                   <div class="star-rating-display" id="feedback-stars-display"></div>
                 </div>
               </div>
               <div class="kpi-card glow-card">
-                <div class="kpi-icon icon-green"><i class="bx bxs-message-dots"></i></div>
+                <div class="kpi-icon icon-teal"><i class="bx bxs-message-dots"></i></div>
                 <div class="kpi-data">
-                  <h3>Feedback Responses</h3>
-                  <p class="kpi-value" id="feedback-total-count">-</p>
-                  <p class="kpi-meta text-secondary">With text comments</p>
+                  <h3>Total Reviews</h3>
+                  <p class="kpi-value" id="feedback-total-count">0</p>
+                  <p class="kpi-meta text-secondary">Verified student responses</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card border-warning">
+                <div class="kpi-icon icon-warning"><i class="bx bx-trending-up"></i></div>
+                <div class="kpi-data">
+                  <h3>Net Promoter Score</h3>
+                  <p class="kpi-value text-amber" id="feedback-nps-score">+0</p>
+                  <p class="kpi-meta text-secondary">Promoters vs Detractors</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-green"><i class="bx bx-smile"></i></div>
+                <div class="kpi-data">
+                  <h3>Positive Sentiment</h3>
+                  <p class="kpi-value text-emerald" id="feedback-sentiment-rate">0%</p>
+                  <p class="kpi-meta text-secondary">4 & 5-Star satisfaction rate</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 5-Point Smiley Sentiment Distribution Card -->
+            <div class="glass-card mt-20" style="padding: 20px 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: white; display: flex; align-items: center; gap: 8px;">
+                  <i class="bx bx-bar-chart-alt-2 text-teal"></i>
+                  <span>5-Point Smiley Sentiment Distribution</span>
+                </h3>
+                <span class="text-secondary" style="font-size: 11.5px;">Live Emotional Response Breakdown</span>
+              </div>
+              <div id="sentiment-bars-container" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px;">
+                <!-- 5 Stars -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 12px; border-radius: 10px; text-align: center;">
+                  <div style="font-size: 24px; margin-bottom: 4px;">😄</div>
+                  <div style="font-size: 12px; font-weight: 700; color: #10b981;">5 Stars</div>
+                  <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 8px;">Very Satisfied</div>
+                  <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                    <div id="sentiment-bar-5" style="width: 0%; height: 100%; background: #10b981; transition: width 0.4s ease;"></div>
+                  </div>
+                  <div id="sentiment-count-5" style="font-size: 11px; font-weight: 700; color: white; margin-top: 6px;">0 (0%)</div>
+                </div>
+                <!-- 4 Stars -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 12px; border-radius: 10px; text-align: center;">
+                  <div style="font-size: 24px; margin-bottom: 4px;">🙂</div>
+                  <div style="font-size: 12px; font-weight: 700; color: #34d399;">4 Stars</div>
+                  <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 8px;">Satisfied</div>
+                  <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                    <div id="sentiment-bar-4" style="width: 0%; height: 100%; background: #34d399; transition: width 0.4s ease;"></div>
+                  </div>
+                  <div id="sentiment-count-4" style="font-size: 11px; font-weight: 700; color: white; margin-top: 6px;">0 (0%)</div>
+                </div>
+                <!-- 3 Stars -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 12px; border-radius: 10px; text-align: center;">
+                  <div style="font-size: 24px; margin-bottom: 4px;">😐</div>
+                  <div style="font-size: 12px; font-weight: 700; color: #fbbf24;">3 Stars</div>
+                  <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 8px;">Neutral</div>
+                  <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                    <div id="sentiment-bar-3" style="width: 0%; height: 100%; background: #fbbf24; transition: width 0.4s ease;"></div>
+                  </div>
+                  <div id="sentiment-count-3" style="font-size: 11px; font-weight: 700; color: white; margin-top: 6px;">0 (0%)</div>
+                </div>
+                <!-- 2 Stars -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 12px; border-radius: 10px; text-align: center;">
+                  <div style="font-size: 24px; margin-bottom: 4px;">🙁</div>
+                  <div style="font-size: 12px; font-weight: 700; color: #f97316;">2 Stars</div>
+                  <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 8px;">Dissatisfied</div>
+                  <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                    <div id="sentiment-bar-2" style="width: 0%; height: 100%; background: #f97316; transition: width 0.4s ease;"></div>
+                  </div>
+                  <div id="sentiment-count-2" style="font-size: 11px; font-weight: 700; color: white; margin-top: 6px;">0 (0%)</div>
+                </div>
+                <!-- 1 Star -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 12px; border-radius: 10px; text-align: center;">
+                  <div style="font-size: 24px; margin-bottom: 4px;">😡</div>
+                  <div style="font-size: 12px; font-weight: 700; color: #ef4444;">1 Star</div>
+                  <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 8px;">Very Dissatisfied</div>
+                  <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                    <div id="sentiment-bar-1" style="width: 0%; height: 100%; background: #ef4444; transition: width 0.4s ease;"></div>
+                  </div>
+                  <div id="sentiment-count-1" style="font-size: 11px; font-weight: 700; color: white; margin-top: 6px;">0 (0%)</div>
                 </div>
               </div>
             </div>
 
             <!-- Survey Filter Panel -->
-            <div class="filter-bar glass-card mt-24" style="display: flex; gap: 16px; flex-wrap: wrap;">
-              <div class="search-box" style="flex: 1; min-width: 280px;">
+            <div class="filter-bar glass-card mt-20" style="display: flex; gap: 14px; flex-wrap: wrap; align-items: center;">
+              <div class="search-box" style="flex: 1; min-width: 240px;">
                 <i class="bx bx-search"></i>
-                <input type="text" id="search-feedback" placeholder="Search comments text or email..." />
+                <input type="text" id="search-feedback" placeholder="Search comments text, email, or assessment..." />
               </div>
               
-              <div class="filter-dropdowns-group" style="display: flex; gap: 12px; margin-left: auto;">
+              <div class="filter-dropdowns-group" style="display: flex; gap: 10px; margin-left: auto; flex-wrap: wrap;">
                 <div class="select-wrapper">
-                  <label for="filter-would-use">Would use?</label>
-                  <select id="filter-would-use">
-                    <option value="">All Answers</option>
+                  <select id="filter-feedback-rating" class="form-select" style="padding: 8px 12px; font-size: 12px;">
+                    <option value="">All Star Ratings</option>
+                    <option value="5">5 Stars (😄 Very Satisfied)</option>
+                    <option value="4">4 Stars (🙂 Satisfied)</option>
+                    <option value="3">3 Stars (😐 Neutral)</option>
+                    <option value="2">2 Stars (🙁 Dissatisfied)</option>
+                    <option value="1">1 Star (😡 Very Dissatisfied)</option>
+                  </select>
+                </div>
+
+                <div class="select-wrapper">
+                  <select id="filter-would-use" class="form-select" style="padding: 8px 12px; font-size: 12px;">
+                    <option value="">All Intentions (Would use?)</option>
                     <option value="Yes, definitely">Yes, definitely</option>
                     <option value="Maybe">Maybe</option>
                     <option value="Probably not">Probably not</option>
@@ -368,14 +631,18 @@
                 </div>
 
                 <div class="select-wrapper">
-                  <label for="filter-reach-first">Reach first?</label>
-                  <select id="filter-reach-first">
-                    <option value="">All Options</option>
+                  <select id="filter-reach-first" class="form-select" style="padding: 8px 12px; font-size: 12px;">
+                    <option value="">All Preferences (Reach first?)</option>
                     <option value="Write on my own">Write on my own</option>
                     <option value="Talk with others">Talk with others</option>
                     <option value="Not sure">Not sure</option>
                   </select>
                 </div>
+
+                <button type="button" class="btn-secondary" onclick="exportFeedbackCSV()" style="white-space: nowrap;">
+                  <i class="bx bx-download"></i>
+                  <span>Export CSV</span>
+                </button>
               </div>
             </div>
 
@@ -385,11 +652,11 @@
                 <thead>
                   <tr>
                     <th>Student Details</th>
-                    <th>Quiz Title</th>
-                    <th>Rating</th>
-                    <th>Would Use? (Q3)</th>
-                    <th>Reach First? (Q4)</th>
-                    <th>Comments Context</th>
+                    <th>Assessment Title</th>
+                    <th>Sentiment Rating</th>
+                    <th>Recommendation Intent</th>
+                    <th>Preferred Channel</th>
+                    <th>User Commentary & Context</th>
                     <th class="text-right">Actions</th>
                   </tr>
                 </thead>
@@ -406,10 +673,59 @@
 
           <!-- TAB: Universities (Onboarding Requests) -->
           <div id="tab-university" class="tab-pane hidden">
-            <div class="filter-bar glass-card">
-              <div class="search-box">
+            <!-- Institutional KPI Strip -->
+            <div class="kpi-grid" style="margin-bottom: 20px;">
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-teal"><i class="bx bx-buildings"></i></div>
+                <div class="kpi-data">
+                  <h3>Campus Requests</h3>
+                  <p class="kpi-value" id="kpi-uni-total">0</p>
+                  <p class="kpi-meta text-secondary">Inbound partnership inquiries</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card border-warning">
+                <div class="kpi-icon icon-warning"><i class="bx bx-calendar-event"></i></div>
+                <div class="kpi-data">
+                  <h3>Demos & Contacted</h3>
+                  <p class="kpi-value text-amber" id="kpi-uni-in-progress">0</p>
+                  <p class="kpi-meta text-secondary">Active discovery discussions</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-green"><i class="bx bx-check-shield"></i></div>
+                <div class="kpi-data">
+                  <h3>Partnered Campuses</h3>
+                  <p class="kpi-value text-emerald" id="kpi-uni-partnered">0</p>
+                  <p class="kpi-meta text-secondary">Live institutional integrations</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-plum"><i class="bx bx-user-pin"></i></div>
+                <div class="kpi-data">
+                  <h3>Key Personnel</h3>
+                  <p class="kpi-value" id="kpi-uni-leads">0</p>
+                  <p class="kpi-meta text-secondary">Deans & Wellness Directors</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="filter-bar glass-card" style="display: flex; gap: 14px; align-items: center;">
+              <div class="search-box" style="flex: 1;">
                 <i class="bx bx-search"></i>
-                <input type="text" id="search-university-contact" placeholder="Search requests by school, name, or role..." />
+                <input type="text" id="search-university-contact" placeholder="Search requests by school, personnel name, email, or role..." />
+              </div>
+              <div class="filter-group" style="margin: 0;">
+                <select id="filter-university-stage" class="form-select" style="padding: 10px 14px; font-size: 13px;">
+                  <option value="">All Partnership Stages</option>
+                  <option value="NEW">New Inquiries</option>
+                  <option value="CONTACTED">Contacted & Outreach Sent</option>
+                  <option value="DEMO_SCHEDULED">Demo / Presentation Scheduled</option>
+                  <option value="PARTNERED">Active Partner Campus</option>
+                </select>
+                <button type="button" class="btn-secondary" onclick="exportUniversityContactsCSV()" style="white-space: nowrap;">
+                  <i class="bx bx-download"></i>
+                  <span>Export CSV</span>
+                </button>
               </div>
             </div>
 
@@ -417,13 +733,13 @@
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>University / College</th>
-                    <th>Contact Person</th>
-                    <th>Role / Title</th>
+                    <th>University / Institution</th>
+                    <th>Key Contact Person</th>
+                    <th>Official Role</th>
                     <th>Email Address</th>
-                    <th>Phone</th>
+                    <th>Partnership Stage</th>
                     <th>Date Received</th>
-                    <th class="text-right">Actions</th>
+                    <th class="text-right">Institutional Actions</th>
                   </tr>
                 </thead>
                 <tbody id="university-contact-list">
@@ -438,10 +754,62 @@
 
           <!-- TAB: Counsellors & Coaching (Onboarding Applications) -->
           <div id="tab-counselors" class="tab-pane hidden">
-            <div class="filter-bar glass-card">
-              <div class="search-box">
+            <!-- Applications KPI Strip -->
+            <div class="kpi-grid" style="margin-bottom: 20px;">
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-plum"><i class="bx bx-user-voice"></i></div>
+                <div class="kpi-data">
+                  <h3>Applications</h3>
+                  <p class="kpi-value" id="kpi-counselor-apps-total">0</p>
+                  <p class="kpi-meta text-secondary">Total onboarding submissions</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card border-warning">
+                <div class="kpi-icon icon-warning"><i class="bx bx-time-five"></i></div>
+                <div class="kpi-data">
+                  <h3>Pending Review</h3>
+                  <p class="kpi-value text-amber" id="kpi-counselor-apps-pending">0</p>
+                  <p class="kpi-meta text-secondary">Awaiting credential check</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-green"><i class="bx bx-badge-check"></i></div>
+                <div class="kpi-data">
+                  <h3>Verified Credentials</h3>
+                  <p class="kpi-value text-emerald" id="kpi-counselor-apps-verified">0</p>
+                  <p class="kpi-meta text-secondary">Licensed therapists & coaches</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-blue"><i class="bx bx-user-check"></i></div>
+                <div class="kpi-data">
+                  <h3>Active Staff</h3>
+                  <p class="kpi-value" id="kpi-counselor-apps-active">0</p>
+                  <p class="kpi-meta text-secondary">Provisioned in roster</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="filter-bar glass-card" style="display: flex; gap: 14px; align-items: center;">
+              <div class="search-box" style="flex: 1;">
                 <i class="bx bx-search"></i>
-                <input type="text" id="search-counselor-contact" placeholder="Search applicants by name, email, or credentials..." />
+                <input type="text" id="search-counselor-contact" placeholder="Search applicants by name, email, credentials, or licenses..." />
+              </div>
+              <div class="filter-group" style="margin: 0; display: flex; gap: 8px;">
+                <select id="filter-counselor-status" class="form-select" style="padding: 10px 14px; font-size: 13px;">
+                  <option value="">All Credential Categories & Stages</option>
+                  <option value="PSYCH">Clinical Psychologists</option>
+                  <option value="LCSW">LCSW / LMFT Licensed</option>
+                  <option value="COACH">Student Life Coaches</option>
+                  <option value="STAGE_NEW">Stage: New Application</option>
+                  <option value="STAGE_DOCS">Stage: Docs Requested</option>
+                  <option value="STAGE_INVITED">Stage: Portal Invite Sent</option>
+                  <option value="STAGE_ONBOARDED">Stage: Active Counselor</option>
+                </select>
+                <button type="button" class="btn-secondary" onclick="exportCounselorApplicationsCSV()" style="white-space: nowrap;">
+                  <i class="bx bx-download"></i>
+                  <span>Export CSV</span>
+                </button>
               </div>
             </div>
 
@@ -449,10 +817,11 @@
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>Counselor Name</th>
+                    <th>Applicant Profile</th>
                     <th>Email Address</th>
                     <th>Phone</th>
-                    <th>Credentials & Licenses</th>
+                    <th>Credentials & Licensing</th>
+                    <th>Onboarding Stage</th>
                     <th>Date Applied</th>
                     <th class="text-right">Actions</th>
                   </tr>
@@ -467,12 +836,60 @@
             </div>
           </div>
 
-          <!-- TAB: General Contacts -->
+          <!-- TAB: General Contacts (Inquiries Manager) -->
           <div id="tab-contacts" class="tab-pane hidden">
-            <div class="filter-bar glass-card">
-              <div class="search-box">
+            <!-- General Contacts KPI Strip -->
+            <div class="kpi-grid" style="margin-bottom: 20px;">
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-teal"><i class="bx bx-envelope"></i></div>
+                <div class="kpi-data">
+                  <h3>Total Inquiries</h3>
+                  <p class="kpi-value" id="kpi-contacts-total">0</p>
+                  <p class="kpi-meta text-secondary">Inbound visitor messages</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card border-warning">
+                <div class="kpi-icon icon-warning"><i class="bx bx-time-five"></i></div>
+                <div class="kpi-data">
+                  <h3>Pending Reply</h3>
+                  <p class="kpi-value text-amber" id="kpi-contacts-pending">0</p>
+                  <p class="kpi-meta text-secondary">Awaiting administrator response</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-green"><i class="bx bx-check-circle"></i></div>
+                <div class="kpi-data">
+                  <h3>Resolved Inquiries</h3>
+                  <p class="kpi-value text-emerald" id="kpi-contacts-resolved">0</p>
+                  <p class="kpi-meta text-secondary">Successfully addressed</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-plum"><i class="bx bx-support"></i></div>
+                <div class="kpi-data">
+                  <h3>General Topics</h3>
+                  <p class="kpi-value" id="kpi-contacts-topics">0</p>
+                  <p class="kpi-meta text-secondary">Support, partnership & queries</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="filter-bar glass-card" style="display: flex; gap: 14px; align-items: center;">
+              <div class="search-box" style="flex: 1;">
                 <i class="bx bx-search"></i>
-                <input type="text" id="search-general-contact" placeholder="Search inquiries by name, email, or subject..." />
+                <input type="text" id="search-general-contact" placeholder="Search inquiries by sender name, email, subject, or message content..." />
+              </div>
+              <div class="filter-group" style="margin: 0; display: flex; gap: 8px;">
+                <select id="filter-general-contact-status" class="form-select" style="padding: 10px 14px; font-size: 13px;">
+                  <option value="">All Inquiries</option>
+                  <option value="PENDING_REPLY">🟡 Pending Reply</option>
+                  <option value="RESOLVED">🟢 Resolved</option>
+                  <option value="ESCALATED">🔴 Escalated / Urgent</option>
+                </select>
+                <button type="button" class="btn-secondary" onclick="exportGeneralContactsCSV()" style="white-space: nowrap;">
+                  <i class="bx bx-download"></i>
+                  <span>Export CSV</span>
+                </button>
               </div>
             </div>
 
@@ -480,9 +897,11 @@
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>Email Address</th>
-                    <th>Subject</th>
+                    <th>Sender Profile</th>
+                    <th>Official Email</th>
+                    <th>Subject Category</th>
+                    <th>Message Excerpt</th>
+                    <th>Status</th>
                     <th>Date Received</th>
                     <th class="text-right">Actions</th>
                   </tr>
@@ -536,12 +955,12 @@
             </div>
 
             <!-- Two Column Layout: Rooms Management & Flagged Queue -->
-            <div style="display: grid; grid-template-columns: 350px 1fr; gap: 20px; align-items: start;">
+            <div style="display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start;">
               
               <!-- Column Left: Rooms Manager -->
               <div class="section-card glass-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                  <h3 style="margin: 0;">TalkRooms</h3>
+                  <h3 style="margin: 0; font-size: 15px;">TalkRooms</h3>
                   <button class="btn-primary small" id="btn-open-create-room" style="font-size: 11px; padding: 6px 12px; height: auto;">+ New Room</button>
                 </div>
 
@@ -567,19 +986,35 @@
 
               <!-- Column Right: Flagged Moderation Queue -->
               <div class="section-card glass-card">
-                <h3>Flagged Content Queue</h3>
-                <p class="section-subtitle">Notes and replies muted or pending review</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                  <div>
+                    <h3 style="margin: 0; font-size: 15px;">Flagged Content Queue</h3>
+                    <p class="section-subtitle" style="margin: 0; font-size: 11px;">Live flagged messages, AI distress alerts & user reports</p>
+                  </div>
+                  <div class="filter-group" style="margin: 0; display: flex; gap: 8px;">
+                    <select id="filter-mod-reason" class="form-select" style="padding: 6px 10px; font-size: 11.5px;">
+                      <option value="">All Flag Types</option>
+                      <option value="CRISIS">AI Crisis Risk Matches</option>
+                      <option value="USER">User Reported Items</option>
+                      <option value="PENDING">Pending Review</option>
+                    </select>
+                    <button type="button" class="btn-secondary small" onclick="exportTalkMindlyCSV()" style="white-space: nowrap; font-size: 11.5px; padding: 6px 10px;">
+                      <i class="bx bx-download"></i>
+                      <span>Export CSV</span>
+                    </button>
+                  </div>
+                </div>
 
-                <div class="table-container mt-16">
+                <div class="table-container mt-12">
                   <table class="data-table small">
                     <thead>
                       <tr>
-                        <th style="width: 80px;">Type</th>
-                        <th>Room/Note</th>
+                        <th style="width: 75px;">Type</th>
+                        <th>Room / Topic</th>
                         <th>User (Nick)</th>
-                        <th>Content</th>
-                        <th>AI Moderation Reason</th>
-                        <th class="text-right" style="width: 140px;">Actions</th>
+                        <th>Flagged Message</th>
+                        <th>Flag Reason & Trigger</th>
+                        <th class="text-right" style="width: 220px;">Safety Actions</th>
                       </tr>
                     </thead>
                     <tbody id="flagged-content-list">
@@ -588,18 +1023,54 @@
                   </table>
                   <div id="flagged-empty-state" class="text-center py-20 text-secondary hidden" style="padding: 40px 0; color: rgba(255,255,255,0.4);">
                     <i class="bx bx-check-circle" style="font-size: 32px; color: #10b981; margin-bottom: 8px; display: block;"></i>
-                    <span style="font-size: 12px; font-weight: 600;">Queue Clean! No flagged items found.</span>
+                    <span style="font-size: 12px; font-weight: 600;">Queue Clean! No unaddressed safety alerts.</span>
                   </div>
                 </div>
               </div>
 
+            </div>
+
+            <!-- Moderation Audit History Log Section -->
+            <div class="section-card glass-card mt-20" id="moderation-audit-log-section">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div>
+                  <h3 style="margin: 0; font-size: 14.5px;">
+                    <i class="bx bx-history text-teal" style="margin-right: 6px;"></i> Moderation Audit History Log
+                  </h3>
+                  <p class="section-subtitle" style="margin: 0; font-size: 11px;">Permanent compliance trail of resolved content interventions</p>
+                </div>
+                <button class="btn-secondary small" onclick="clearLocalAuditLog()" style="font-size: 11px;">
+                  <i class="bx bx-trash"></i> Reset Session Log
+                </button>
+              </div>
+
+              <div class="table-container mt-12">
+                <table class="data-table small">
+                  <thead>
+                    <tr>
+                      <th style="width: 80px;">Item Type</th>
+                      <th>Content Excerpt</th>
+                      <th>Moderator Action</th>
+                      <th>Resolution Note</th>
+                      <th>Resolved At</th>
+                    </tr>
+                  </thead>
+                  <tbody id="moderation-audit-log-body">
+                    <!-- Dynamic audit trail rows -->
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
           <!-- TAB: Counselor Portal Management -->
           <div id="tab-counselor-mgmt" class="tab-pane hidden">
             <!-- Action Bar -->
-            <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-bottom: 20px;">
+              <button type="button" class="btn-secondary" onclick="exportCounselorsCSV()" style="white-space: nowrap;">
+                <i class="bx bx-download"></i>
+                <span>Export CSV</span>
+              </button>
               <button class="btn-primary" id="btn-open-invite-counselor">
                 <i class="bx bx-user-plus" style="font-size: 18px;"></i>
                 <span>Invite New Counselor</span>
@@ -657,88 +1128,741 @@
             </div>
           </div>
 
-          <!-- TAB: Master Calendar -->
+          <!-- TAB: Master Calendar (Appointments & Availability Dispatcher) -->
           <div id="tab-master-calendar" class="tab-pane hidden">
-            <div id="master-calendar-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px;">
-              <!-- Sessions rendered dynamically -->
+            <!-- Calendar KPI Strip -->
+            <div class="kpi-grid" style="margin-bottom: 20px;">
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-teal"><i class="bx bx-calendar-event"></i></div>
+                <div class="kpi-data">
+                  <h3>Total Bookings</h3>
+                  <p class="kpi-value" id="kpi-cal-total">0</p>
+                  <p class="kpi-meta text-secondary">All scheduled & past encounters</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card border-warning">
+                <div class="kpi-icon icon-warning"><i class="bx bx-time-five"></i></div>
+                <div class="kpi-data">
+                  <h3>Upcoming / Active</h3>
+                  <p class="kpi-value text-amber" id="kpi-cal-upcoming">0</p>
+                  <p class="kpi-meta text-secondary">Confirmed upcoming sessions</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-green"><i class="bx bx-check-circle"></i></div>
+                <div class="kpi-data">
+                  <h3>Completed Sessions</h3>
+                  <p class="kpi-value text-emerald" id="kpi-cal-completed">0</p>
+                  <p class="kpi-meta text-secondary">Successfully conducted</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-plum"><i class="bx bx-pie-chart-alt-2"></i></div>
+                <div class="kpi-data">
+                  <h3>Capacity Utilization</h3>
+                  <p class="kpi-value" id="kpi-cal-utilization">85%</p>
+                  <p class="kpi-meta text-secondary">Active clinical availability</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Counselor Weekly Time-Slot Availability Strip -->
+            <div class="glass-card mb-20" style="padding: 20px 24px; margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <div>
+                  <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: white; display: flex; align-items: center; gap: 8px;">
+                    <i class="bx bx-timer text-teal"></i>
+                    <span>Counselor Time-Slot Allocation & Live Capacity</span>
+                  </h3>
+                  <p class="section-subtitle" style="margin: 0; font-size: 11.5px;">Weekly clinical booking windows and counselor availability</p>
+                </div>
+                <button class="btn-secondary small" onclick="fetchAdminMasterCalendar(); showToast('Refreshing master calendar and availability...', 'info');" style="font-size: 11px;">
+                  <i class="bx bx-refresh"></i> Refresh Slots
+                </button>
+              </div>
+              <div id="counselor-slots-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px;">
+                <!-- Dynamically rendered counselor slot utilization cards -->
+              </div>
+            </div>
+
+            <!-- Filter & Search Controls Bar -->
+            <div class="filter-bar glass-card" style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 20px;">
+              <div class="search-box" style="flex: 1; min-width: 260px;">
+                <i class="bx bx-search"></i>
+                <input type="text" id="search-master-calendar" placeholder="Search sessions by student, counselor, or topic..." />
+              </div>
+              <div class="filter-group" style="margin: 0;">
+                <select id="filter-calendar-status" class="form-select" style="padding: 10px 14px; font-size: 13px;">
+                  <option value="">All Session Statuses</option>
+                  <option value="CONFIRMED">🟢 Confirmed / Upcoming</option>
+                  <option value="IN_PROGRESS">🔵 In Progress (Live Video)</option>
+                  <option value="COMPLETED">🟣 Completed</option>
+                  <option value="CANCELLED_BY_STUDENT">🟠 Cancelled by Student</option>
+                  <option value="CANCELLED_BY_COUNSELOR">🔴 Cancelled / Admin Override</option>
+                </select>
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn-secondary small" onclick="exportSessionsCSV()" style="padding: 8px 12px; font-size: 11px;">
+                  <i class="bx bx-download"></i> Export CSV
+                </button>
+                <button type="button" class="btn-primary small" id="btn-calendar-view-cards" onclick="switchCalendarLayout('cards')" style="padding: 8px 12px; font-size: 11px;">
+                  <i class="bx bx-grid-alt"></i> Cards
+                </button>
+                <button type="button" class="btn-secondary small" id="btn-calendar-view-table" onclick="switchCalendarLayout('table')" style="padding: 8px 12px; font-size: 11px;">
+                  <i class="bx bx-list-ul"></i> Table
+                </button>
+              </div>
+            </div>
+
+            <!-- Layout 1: Grid Cards View -->
+            <div id="master-calendar-cards-view">
+              <div id="master-calendar-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px;">
+                <!-- Sessions rendered dynamically -->
+              </div>
+            </div>
+
+            <!-- Layout 2: Data Table View (Hidden by default) -->
+            <div id="master-calendar-table-view" class="table-container glass-card hidden">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Student Details</th>
+                    <th>Assigned Counselor</th>
+                    <th>Scheduled Date & Time</th>
+                    <th>Status</th>
+                    <th>Jitsi Video Room</th>
+                    <th class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="master-calendar-table-body">
+                  <!-- Dynamically rendered rows -->
+                </tbody>
+              </table>
+            </div>
+
+            <div id="calendar-empty-state" class="text-center py-20 text-secondary hidden" style="padding: 40px 0; color: rgba(255,255,255,0.4);">
+              <i class="bx bx-calendar-x" style="font-size: 32px; color: hsl(var(--primary-teal)); margin-bottom: 8px; display: block;"></i>
+              <span style="font-size: 13px; font-weight: 600;">No clinical sessions matching filter criteria.</span>
             </div>
           </div>
 
-          <!-- TAB: Dual Feedback Analytics -->
+          <!-- TAB: Dual Feedback Analytics & Clinical Matrix -->
           <div id="tab-dual-feedback" class="tab-pane hidden">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-              <!-- Student to Counselor Feedback -->
-              <div class="glass-card">
-                <h3 style="font-size: 16px; font-weight: 700; color: white; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-                  <i class="bx bx-star" style="color: hsl(var(--color-amber));"></i>
-                  <span>Student → Counselor Ratings</span>
-                </h3>
-                <p class="section-subtitle">Reviews submitted by students post-session</p>
-                <div id="student-to-counselor-feedback-list" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
-                  <!-- Dynamically loaded -->
+            <!-- Dual Feedback KPI Strip -->
+            <div class="kpi-grid" style="margin-bottom: 20px;">
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-plum"><i class="bx bx-star"></i></div>
+                <div class="kpi-data">
+                  <h3>Clinical Rating</h3>
+                  <p class="kpi-value" id="kpi-dual-avg-rating">5.0</p>
+                  <p class="kpi-meta text-secondary">Student rating of counselors</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-teal"><i class="bx bx-user-voice"></i></div>
+                <div class="kpi-data">
+                  <h3>Student Reviews</h3>
+                  <p class="kpi-value" id="kpi-dual-student-reviews">0</p>
+                  <p class="kpi-meta text-secondary">Counselor session reviews</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-green"><i class="bx bx-clipboard"></i></div>
+                <div class="kpi-data">
+                  <h3>Clinical Evaluations</h3>
+                  <p class="kpi-value text-emerald" id="kpi-dual-counselor-evals">0</p>
+                  <p class="kpi-meta text-secondary">Counselor-logged session notes</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card border-warning">
+                <div class="kpi-icon icon-warning"><i class="bx bx-flag"></i></div>
+                <div class="kpi-data">
+                  <h3>Follow-ups Flagged</h3>
+                  <p class="kpi-value text-amber" id="kpi-dual-followups">0</p>
+                  <p class="kpi-meta text-secondary">Further support recommended</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dual Matrix View Switcher -->
+            <div class="filter-bar glass-card" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn-primary" id="btn-dual-view-student" onclick="switchDualFeedbackView('student')" style="font-size: 12.5px; padding: 8px 16px; display: flex; align-items: center; gap: 6px;">
+                  <i class="bx bx-user-check"></i>
+                  <span>Student → Counselor Reviews</span>
+                </button>
+                <button type="button" class="btn-secondary" id="btn-dual-view-counselor" onclick="switchDualFeedbackView('counselor')" style="font-size: 12.5px; padding: 8px 16px; display: flex; align-items: center; gap: 6px;">
+                  <i class="bx bx-plus-medical"></i>
+                  <span>Counselor → Student Clinical Evaluations</span>
+                </button>
+              </div>
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <div class="search-box" style="width: 300px;">
+                  <i class="bx bx-search"></i>
+                  <input type="text" id="search-dual-feedback" placeholder="Search sessions by student, counselor, or notes..." />
+                </div>
+                <button type="button" class="btn-secondary" onclick="exportDualFeedbackCSV()" style="white-space: nowrap;">
+                  <i class="bx bx-download"></i>
+                  <span>Export CSV</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Panel 1: Student -> Counselor Reviews -->
+            <div id="panel-dual-student" class="table-container glass-card">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Counselor Profile</th>
+                    <th>Rating & Stars</th>
+                    <th>Comments & Feedback</th>
+                    <th>Session Date</th>
+                    <th class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="student-to-counselor-table-body">
+                  <!-- Dynamically loaded rows -->
+                </tbody>
+              </table>
+              <div id="dual-student-empty" class="text-center py-20 text-secondary hidden" style="padding: 36px 0; color: rgba(255,255,255,0.4);">
+                No student session reviews recorded yet.
+              </div>
+            </div>
+
+            <!-- Panel 2: Counselor -> Student Evaluations (Hidden by default) -->
+            <div id="panel-dual-counselor" class="table-container glass-card hidden">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Counselor</th>
+                    <th>Student Profile</th>
+                    <th>Clinical Score</th>
+                    <th>Clinical Summary & Progress Notes</th>
+                    <th>Session Date</th>
+                    <th class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="counselor-to-student-table-body">
+                  <!-- Dynamically loaded rows -->
+                </tbody>
+              </table>
+              <div id="dual-counselor-empty" class="text-center py-20 text-secondary hidden" style="padding: 36px 0; color: rgba(255,255,255,0.4);">
+                No clinical session evaluations recorded yet.
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB: Access Control -->
+          <div id="tab-access-control" class="tab-pane hidden">
+            <!-- Top Hero Overview Banner -->
+            <div class="glass-card" style="padding: 24px; margin-bottom: 24px; background: linear-gradient(135deg, rgba(5, 149, 157, 0.12), rgba(122, 91, 147, 0.12)); border: 1px solid rgba(5, 149, 157, 0.25); border-radius: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; background: rgba(5, 149, 157, 0.2); color: #06b6d4; font-size: 20px;">
+                      <i class="bx bxs-shield-check"></i>
+                    </span>
+                    <h3 style="font-size: 18px; font-weight: 700; color: white; margin: 0;">Student Human Counseling Access Control</h3>
+                    <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: 600;">Live Enforced</span>
+                  </div>
+                  <p style="font-size: 13px; color: #94a3b8; line-height: 1.5; max-width: 720px; margin: 0;">
+                    Manage which students are eligible for 1-on-1 human coaching sessions. Students match either by having an official university domain (e.g. <code>@ves.ac.in</code>) or by being explicitly whitelisted in the Bypass list (e.g. <code>jmalani54@gmail.com</code>).
+                  </p>
+                </div>
+                <!-- Quick Stats Strip -->
+                <div style="display: flex; gap: 14px; align-items: center;">
+                  <button type="button" class="btn-secondary small" onclick="exportAccessControlCSV()" style="white-space: nowrap; height: 42px; display: flex; align-items: center; gap: 6px;">
+                    <i class="bx bx-download"></i>
+                    <span>Export Rules CSV</span>
+                  </button>
+                  <div style="text-align: right; background: rgba(0,0,0,0.3); padding: 10px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+                    <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Allowed Domains</div>
+                    <div id="stat-allowed-domains-count" style="font-size: 20px; font-weight: 800; color: white;">0</div>
+                  </div>
+                  <div style="text-align: right; background: rgba(0,0,0,0.3); padding: 10px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+                    <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Bypass Accounts</div>
+                    <div id="stat-bypass-emails-count" style="font-size: 20px; font-weight: 800; color: #a855f7;">0</div>
+                  </div>
                 </div>
               </div>
 
-              <!-- Counselor to Student Feedback -->
-              <div class="section-card glass-card">
-                <h3>Counselor → Student Evaluations</h3>
-                <p class="section-subtitle">Clinical engagement evaluations submitted by counselors</p>
-                <div id="counselor-to-student-feedback-list" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
-                  <!-- Dynamically loaded -->
+              <!-- Real-time Student Eligibility Diagnostic Tester -->
+              <div style="margin-top: 20px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <span style="font-size: 12px; font-weight: 600; color: #cbd5e1; display: flex; align-items: center; gap: 6px;">
+                  <i class="bx bx-check-shield text-teal"></i> Test Email Access:
+                </span>
+                <div style="display: flex; gap: 8px; flex: 1; min-width: 280px; max-width: 500px;">
+                  <input type="email" id="input-test-access-email" placeholder="e.g. jmalani54@gmail.com or student@ves.ac.in" style="flex: 1; font-size: 12px; padding: 8px 12px; border-radius: 8px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); color: white;" />
+                  <button type="button" id="btn-test-access-email" class="btn-secondary small" style="font-size: 12px; padding: 8px 14px;">Verify</button>
+                </div>
+                <div id="test-access-result" style="font-size: 12px; font-weight: 600;"></div>
+              </div>
+            </div>
+
+            <!-- Two Side-by-Side Management Cards -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 24px;">
+              
+              <!-- CARD 1: Allowed University Domains -->
+              <div class="glass-card" style="padding: 24px; border-radius: 16px; display: flex; flex-direction: column;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                  <div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <i class="bx bxs-school" style="font-size: 20px; color: #06b6d4;"></i>
+                      <h3 style="font-size: 16px; font-weight: 700; color: white; margin: 0;">1. Allowed University Domains</h3>
+                    </div>
+                    <p style="font-size: 12px; color: #94a3b8; margin-top: 4px; line-height: 1.4;">
+                      All students signing up with an email matching these domains can book human sessions.
+                    </p>
+                  </div>
+                  <button type="button" id="btn-open-add-domain-modal" class="btn-primary small" style="font-size: 12px; padding: 7px 14px; display: flex; align-items: center; gap: 6px;">
+                    <i class="bx bx-plus"></i> Add Domain
+                  </button>
+                </div>
+
+                <!-- Search Domains -->
+                <div class="search-box" style="margin-bottom: 14px;">
+                  <i class="bx bx-search"></i>
+                  <input type="text" id="search-allowed-domains" placeholder="Filter allowed domains..." style="font-size: 12px;" />
+                </div>
+
+                <!-- Domains Table -->
+                <div class="table-container" style="flex: 1; min-height: 240px; max-height: 480px; overflow-y: auto;">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Domain</th>
+                        <th>Institution / Label</th>
+                        <th>Date Added</th>
+                        <th class="text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="allowed-domains-tbody">
+                      <!-- Rendered dynamically -->
+                    </tbody>
+                  </table>
+                  <div id="allowed-domains-empty" class="text-center text-secondary hidden" style="padding: 36px 0; font-size: 13px;">
+                    No allowed domains configured yet.
+                  </div>
                 </div>
               </div>
+
+              <!-- CARD 2: Bypass Student Emails -->
+              <div class="glass-card" style="padding: 24px; border-radius: 16px; display: flex; flex-direction: column;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                  <div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <i class="bx bxs-user-check" style="font-size: 20px; color: #a855f7;"></i>
+                      <h3 style="font-size: 16px; font-weight: 700; color: white; margin: 0;">2. Bypass Student Emails</h3>
+                    </div>
+                    <p style="font-size: 12px; color: #94a3b8; margin-top: 4px; line-height: 1.4;">
+                      Specific accounts permitted to book counseling without a university domain (e.g. Gmail VIPs).
+                    </p>
+                  </div>
+                  <button type="button" id="btn-open-add-bypass-modal" class="btn-primary small" style="font-size: 12px; padding: 7px 14px; display: flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #9333ea, #7e22ce); border-color: rgba(168,85,247,0.4);">
+                    <i class="bx bx-plus"></i> Add Email
+                  </button>
+                </div>
+
+                <!-- Search Bypass Emails -->
+                <div class="search-box" style="margin-bottom: 14px;">
+                  <i class="bx bx-search"></i>
+                  <input type="text" id="search-bypass-emails" placeholder="Filter bypass student emails..." style="font-size: 12px;" />
+                </div>
+
+                <!-- Bypass Emails Table -->
+                <div class="table-container" style="flex: 1; min-height: 240px; max-height: 480px; overflow-y: auto;">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Student Email</th>
+                        <th>Note / Access Reason</th>
+                        <th>Date Added</th>
+                        <th class="text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="bypass-emails-tbody">
+                      <!-- Rendered dynamically -->
+                    </tbody>
+                  </table>
+                  <div id="bypass-emails-empty" class="text-center text-secondary hidden" style="padding: 36px 0; font-size: 13px;">
+                    No bypass student accounts added yet.
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- TAB: Policy Guide -->
+          <div id="tab-policies" class="tab-pane hidden">
+            <!-- Policy Header Hero Banner -->
+            <div class="glass-card" style="padding: 24px; margin-bottom: 24px; background: linear-gradient(135deg, rgba(122, 91, 147, 0.15), rgba(5, 149, 157, 0.15)); border: 1px solid rgba(122, 91, 147, 0.3); border-radius: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 10px; background: rgba(122, 91, 147, 0.25); color: #c084fc; font-size: 22px;">
+                      <i class="bx bxs-book-content"></i>
+                    </span>
+                    <h3 style="font-size: 19px; font-weight: 700; color: white; margin: 0;">Unified Policy & Governance Guide</h3>
+                    <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: 600;">Active Standard v2026.4</span>
+                  </div>
+                  <p style="font-size: 13px; color: #94a3b8; line-height: 1.5; max-width: 760px; margin: 0;">
+                    Complete operational and clinical manual governing WellMindly. All counselors, university administrators, moderators, and support engineers are bound by these protocols.
+                  </p>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <button type="button" class="btn-secondary" onclick="window.print()" style="display: flex; align-items: center; gap: 6px; padding: 10px 16px; font-size: 12.5px;">
+                    <i class="bx bx-printer"></i>
+                    <span>Print / Save PDF</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Quick Policy Highlights Strip -->
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 20px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.08);">
+                <div style="background: rgba(0,0,0,0.25); padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
+                  <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Data Privacy</div>
+                  <div style="font-size: 13px; font-weight: 700; color: #38bdf8; margin-top: 2px;">FERPA & HIPAA Aligned</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.25); padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
+                  <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Emergency Triage</div>
+                  <div style="font-size: 13px; font-weight: 700; color: #ef4444; margin-top: 2px;">988 Immediate Protocol</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.25); padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
+                  <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Cancellation Window</div>
+                  <div style="font-size: 13px; font-weight: 700; color: #f59e0b; margin-top: 2px;">24-Hour Notice Rule</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.25); padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
+                  <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">TalkMindly Civility</div>
+                  <div style="font-size: 13px; font-weight: 700; color: #10b981; margin-top: 2px;">Zero-Tolerance Safety</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Search & Category Filter Navigation Bar -->
+            <div class="filter-bar glass-card" style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 24px;">
+              <div class="search-box" style="flex: 1; min-width: 280px;">
+                <i class="bx bx-search"></i>
+                <input type="text" id="search-policy-guide" placeholder="Search policies by keyword (e.g. FERPA, 24-hr, suicide, moderation, ethics, confidentiality)..." />
+              </div>
+              <div id="policy-category-filters" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" class="btn-primary small policy-filter-btn" data-category="all" style="font-size: 11.5px; padding: 7px 12px;">All Policies (6)</button>
+                <button type="button" class="btn-secondary small policy-filter-btn" data-category="privacy" style="font-size: 11.5px; padding: 7px 12px;">Privacy & FERPA</button>
+                <button type="button" class="btn-secondary small policy-filter-btn" data-category="crisis" style="font-size: 11.5px; padding: 7px 12px;">Emergency Escalation</button>
+                <button type="button" class="btn-secondary small policy-filter-btn" data-category="ethics" style="font-size: 11.5px; padding: 7px 12px;">Counselor Ethics</button>
+                <button type="button" class="btn-secondary small policy-filter-btn" data-category="sessions" style="font-size: 11.5px; padding: 7px 12px;">Session Booking</button>
+                <button type="button" class="btn-secondary small policy-filter-btn" data-category="safety" style="font-size: 11.5px; padding: 7px 12px;">TalkMindly Safety</button>
+                <button type="button" class="btn-secondary small policy-filter-btn" data-category="access" style="font-size: 11.5px; padding: 7px 12px;">Access Control</button>
+              </div>
+            </div>
+
+            <!-- Policy Cards Container -->
+            <div id="policy-cards-grid" style="display: flex; flex-direction: column; gap: 20px;">
+
+              <!-- POLICY 1: Student Data Privacy & FERPA Compliance -->
+              <div class="glass-card policy-item-card" data-category="privacy" style="padding: 24px; border-left: 4px solid #38bdf8;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="width: 32px; height: 32px; border-radius: 8px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                      <i class="bx bxs-lock-alt"></i>
+                    </span>
+                    <div>
+                      <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: white;">1. Student Data Privacy & FERPA / HIPAA Compliance Standard</h4>
+                      <span style="font-size: 11.5px; color: #94a3b8;">Section 101 • Institutional Security & Student Rights</span>
+                    </div>
+                  </div>
+                  <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 11px; padding: 4px 10px; border-radius: 8px;">Mandatory Compliance</span>
+                </div>
+                <div style="font-size: 13px; color: #cbd5e1; line-height: 1.6; space-y: 10px;">
+                  <p style="margin-top: 0;">
+                    <strong>Core Principle:</strong> All student psychological screening scores, clinical check-ins, journal entries, and counselor appointment histories constitute strictly confidential educational and wellness records under FERPA regulations and HIPAA privacy frameworks.
+                  </p>
+                  <ul style="margin: 10px 0 14px 20px; padding: 0;">
+                    <li style="margin-bottom: 6px;"><strong>Encryption Standard:</strong> All data is encrypted at rest using AES-256 and in-flight over TLS 1.3. Raw database connections require SSL certificate verification.</li>
+                    <li style="margin-bottom: 6px;"><strong>Anonymity in Peer Spaces:</strong> In TalkMindly peer spaces, student real names and institutional IDs are strictly decoupled. System-generated pseudonyms protect user privacy.</li>
+                    <li style="margin-bottom: 6px;"><strong>Role-Based Access Control:</strong> Counselors may only view records for students with active or scheduled appointments. General campus administrators cannot view clinical assessment answer sheets.</li>
+                    <li style="margin-bottom: 6px;"><strong>Right to Erasure & Export:</strong> Students hold the right to export longitudinal records or submit an account anonymization request via support.</li>
+                  </ul>
+                  <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
+                    <button class="btn-secondary small" onclick="switchTab('students')"><i class="bx bx-user"></i> Student Registry</button>
+                    <button class="btn-secondary small" onclick="switchTab('quizzes')"><i class="bx bx-file"></i> Assessments Hub</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- POLICY 2: Clinical Emergency & Crisis Escalation Protocol -->
+              <div class="glass-card policy-item-card" data-category="crisis" style="padding: 24px; border-left: 4px solid #ef4444;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="width: 32px; height: 32px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); color: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                      <i class="bx bxs-error-circle"></i>
+                    </span>
+                    <div>
+                      <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: white;">2. Clinical Emergency & Crisis Escalation Protocol</h4>
+                      <span style="font-size: 11.5px; color: #94a3b8;">Section 201 • Life Safety & High Distress Triage</span>
+                    </div>
+                  </div>
+                  <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; font-size: 11px; padding: 4px 10px; border-radius: 8px;">Life Safety Protocol</span>
+                </div>
+                <div style="font-size: 13px; color: #cbd5e1; line-height: 1.6;">
+                  <p style="margin-top: 0;">
+                    <strong>Trigger Criteria:</strong> Any student assessment scoring <code>PHQ-9 Question 9 ≥ 1</code> (thoughts of self-harm or suicide), or any TalkMindly message containing suicidal intent, triggers immediate systemic crisis escalation.
+                  </p>
+                  <ul style="margin: 10px 0 14px 20px; padding: 0;">
+                    <li style="margin-bottom: 6px;"><strong>Immediate Client Interruption:</strong> The student UI immediately renders the Emergency Crisis Modal with 1-click links to the 988 Suicide & Crisis Lifeline (call/text 988), Crisis Text Line (text HOME to 741741), and campus security dispatch.</li>
+                    <li style="margin-bottom: 6px;"><strong>Platform Triage Banner:</strong> Super Admin dashboard receives a high-priority alert with immediate red glowing badge in the Requires Attention feed.</li>
+                    <li style="margin-bottom: 6px;"><strong>Counselor Priority Routing:</strong> If the student has an assigned counselor, the counselor is notified via urgent portal alert and email to initiate welfare contact.</li>
+                    <li style="margin-bottom: 6px;"><strong>Non-Delayed Response SLA:</strong> Clinical review of critical alerts must commence within 15 minutes during operating hours.</li>
+                  </ul>
+                  <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
+                    <button class="btn-secondary small" onclick="switchTab('moderation')"><i class="bx bx-shield-quarter"></i> Safety Queue</button>
+                    <button class="btn-secondary small" onclick="switchTab('overview')"><i class="bx bx-radar"></i> Live Triage</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- POLICY 3: Counselor Code of Ethics & Practice Standards -->
+              <div class="glass-card policy-item-card" data-category="ethics" style="padding: 24px; border-left: 4px solid #a855f7;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="width: 32px; height: 32px; border-radius: 8px; background: rgba(168, 85, 247, 0.15); color: #a855f7; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                      <i class="bx bxs-certification"></i>
+                    </span>
+                    <div>
+                      <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: white;">3. Counselor Code of Ethics & Professional Practice</h4>
+                      <span style="font-size: 11.5px; color: #94a3b8;">Section 301 • Clinical Credentialing & Ethical Conduct</span>
+                    </div>
+                  </div>
+                  <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 11px; padding: 4px 10px; border-radius: 8px;">Licensed Standards</span>
+                </div>
+                <div style="font-size: 13px; color: #cbd5e1; line-height: 1.6;">
+                  <p style="margin-top: 0;">
+                    <strong>Scope & Qualification:</strong> All practicing WellMindly therapists must hold valid state licensure (e.g. LCSW, LMFT, LPC, PsyD, PhD, MD) or verified professional mental health coaching certification.
+                  </p>
+                  <ul style="margin: 10px 0 14px 20px; padding: 0;">
+                    <li style="margin-bottom: 6px;"><strong>Mandatory Documentation:</strong> Counselors must submit objective, confidential post-session evaluations in the Counselor Portal within 24 hours of session completion.</li>
+                    <li style="margin-bottom: 6px;"><strong>Dual Relationship Prohibition:</strong> Counselors are prohibited from engaging in personal, romantic, or commercial interactions with students outside the platform.</li>
+                    <li style="margin-bottom: 6px;"><strong>Non-Abandonment Rule:</strong> Counselors must maintain continuous weekly slot availability as committed during onboarding, and provide at least 30 days advance notice before pausing availability.</li>
+                    <li style="margin-bottom: 6px;"><strong>Dr. Title Regulation:</strong> Only counselors holding doctoral credentials (MD, PhD, PsyD) may be designated with the "Dr." prefix in master calendar and directories.</li>
+                  </ul>
+                  <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
+                    <button class="btn-secondary small" onclick="switchTab('counselors')"><i class="bx bx-id-card"></i> Counselor Apps</button>
+                    <button class="btn-secondary small" onclick="switchTab('counselor-mgmt')"><i class="bx bx-user-check"></i> Provisioning Roster</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- POLICY 4: Session Booking & Cancellation Regulations -->
+              <div class="glass-card policy-item-card" data-category="sessions" style="padding: 24px; border-left: 4px solid #f59e0b;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, 0.15); color: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                      <i class="bx bxs-calendar-check"></i>
+                    </span>
+                    <div>
+                      <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: white;">4. Session Booking, 24-Hr Reschedule & No-Show Regulations</h4>
+                      <span style="font-size: 11.5px; color: #94a3b8;">Section 401 • Encounter Scheduling & Time Governance</span>
+                    </div>
+                  </div>
+                  <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 11px; padding: 4px 10px; border-radius: 8px;">Operational Rule</span>
+                </div>
+                <div style="font-size: 13px; color: #cbd5e1; line-height: 1.6;">
+                  <p style="margin-top: 0;">
+                    <strong>Scheduling Windows:</strong> Sessions are booked in 45-minute clinical windows via Daily.co end-to-end encrypted video rooms.
+                  </p>
+                  <ul style="margin: 10px 0 14px 20px; padding: 0;">
+                    <li style="margin-bottom: 6px;"><strong>24-Hour Cancellation Policy:</strong> Students or counselors may reschedule or cancel appointments up to 24 hours prior to scheduled start time without restriction.</li>
+                    <li style="margin-bottom: 6px;"><strong>Late Cancellations (&lt;24 hours):</strong> Recorded as a Late Cancellation event. Repeated occurrences (&gt;2 per academic semester) trigger an automatic wellness advisor review.</li>
+                    <li style="margin-bottom: 6px;"><strong>No-Show Protocol:</strong> Counselors remain in the video waiting room for 15 minutes. If student fails to join, the session is archived as NO_SHOW and an automated welfare outreach email is dispatched.</li>
+                    <li style="margin-bottom: 6px;"><strong>Admin Reassignment Authority:</strong> Super Admins possess full authority to reassign appointments in the Master Calendar across active, verified counselors in event of clinical emergencies.</li>
+                  </ul>
+                  <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
+                    <button class="btn-secondary small" onclick="switchTab('master-calendar')"><i class="bx bx-calendar"></i> Master Calendar</button>
+                    <button class="btn-secondary small" onclick="switchTab('dual-feedback')"><i class="bx bx-star"></i> Session Evaluations</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- POLICY 5: TalkMindly Safety & Content Moderation Guidelines -->
+              <div class="glass-card policy-item-card" data-category="safety" style="padding: 24px; border-left: 4px solid #10b981;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="width: 32px; height: 32px; border-radius: 8px; background: rgba(16, 185, 129, 0.15); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                      <i class="bx bxs-shield-half"></i>
+                    </span>
+                    <div>
+                      <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: white;">5. TalkMindly Community Civility & Content Moderation Guidelines</h4>
+                      <span style="font-size: 11.5px; color: #94a3b8;">Section 501 • Peer Community Safety & Automated Enforcement</span>
+                    </div>
+                  </div>
+                  <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 11px; padding: 4px 10px; border-radius: 8px;">Zero-Tolerance</span>
+                </div>
+                <div style="font-size: 13px; color: #cbd5e1; line-height: 1.6;">
+                  <p style="margin-top: 0;">
+                    <strong>Mission:</strong> TalkMindly provides an anonymous, compassionate peer support community for collegiate students navigating academic and emotional stressors.
+                  </p>
+                  <ul style="margin: 10px 0 14px 20px; padding: 0;">
+                    <li style="margin-bottom: 6px;"><strong>Prohibited Content:</strong> Profanity, harassment, bullying, doxxing, academic cheating solicitation, hate speech, and explicit self-harm instructions are strictly blocked.</li>
+                    <li style="margin-bottom: 6px;"><strong>Automated Multi-Layer Defense:</strong> Submissions undergo deterministic clinical heuristic scanning followed by Google Gemini AI toxicity analysis before publication. Flagged posts are rejected immediately and routed to the moderation queue.</li>
+                    <li style="margin-bottom: 6px;"><strong>User Flagging Mechanism:</strong> Any participant may report a post with a reason (Crisis, Harassment, Inappropriate, Spam). Flagged items are placed into immediate moderator escrow.</li>
+                    <li style="margin-bottom: 6px;"><strong>Moderator Actions:</strong> Administrators may Approve (reinstate), Delete (purge), or permanently Mute repeat offenders.</li>
+                  </ul>
+                  <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
+                    <button class="btn-secondary small" onclick="switchTab('moderation')"><i class="bx bx-shield-quarter"></i> Moderation Queue</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- POLICY 6: Institutional Access Control & University Whitelisting -->
+              <div class="glass-card policy-item-card" data-category="access" style="padding: 24px; border-left: 4px solid #06b6d4;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="width: 32px; height: 32px; border-radius: 8px; background: rgba(6, 182, 212, 0.15); color: #06b6d4; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                      <i class="bx bxs-key"></i>
+                    </span>
+                    <div>
+                      <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: white;">6. Institutional University Access Control & Domain Whitelisting Standards</h4>
+                      <span style="font-size: 11.5px; color: #94a3b8;">Section 601 • Campus Eligibility & Counseling Entitlement</span>
+                    </div>
+                  </div>
+                  <span class="badge" style="background: rgba(6, 182, 212, 0.15); color: #22d3ee; font-size: 11px; padding: 4px 10px; border-radius: 8px;">Access Governance</span>
+                </div>
+                <div style="font-size: 13px; color: #cbd5e1; line-height: 1.6;">
+                  <p style="margin-top: 0;">
+                    <strong>Eligibility Rule:</strong> To preserve high clinical quality and prevent quota exhaustion, 1-on-1 human counseling sessions are restricted to verified students from partner university institutions or approved bypass accounts.
+                  </p>
+                  <ul style="margin: 10px 0 14px 20px; padding: 0;">
+                    <li style="margin-bottom: 6px;"><strong>Domain Verification:</strong> Students with verified institutional email domains (e.g. <code>@ves.ac.in</code>) receive full counseling booking entitlements automatically upon email confirmation.</li>
+                    <li style="margin-bottom: 6px;"><strong>Bypass Student Accounts:</strong> Super Admins can whitelist specific external accounts (e.g. transfer students, athletes, pilot participants) with an explicit recorded business reason.</li>
+                    <li style="margin-bottom: 6px;"><strong>Database Persistence:</strong> All access rules are stored in permanent PostgreSQL relational tables (<code>AllowedUniversityDomain</code> and <code>BypassStudentEmail</code>) and persist across system reboots and updates.</li>
+                    <li style="margin-bottom: 6px;"><strong>Real-Time Verification:</strong> Email verification tester in the Access Control panel allows administrators to test eligibility immediately before granting access.</li>
+                  </ul>
+                  <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
+                    <button class="btn-secondary small" onclick="switchTab('access-control')"><i class="bx bx-shield-check"></i> Manage Access Rules</button>
+                    <button class="btn-secondary small" onclick="switchTab('university')"><i class="bx bx-school"></i> University Requests</button>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
 
         </div>
       </main>
+
     </div>
 
-    <!-- 3. Modals -->
-    <!-- Modal: Student Profile Details -->
+    <!-- Modal: Student Clinical Dossier -->
     <div id="modal-student" class="modal-wrapper hidden">
-      <div class="modal-card width-xl">
+      <div class="modal-card width-xl" id="student-dossier-printable">
         <div class="modal-header">
           <div class="student-profile-header">
             <div class="profile-avatar" id="modal-avatar">SD</div>
-            <div>
-              <h2 id="modal-student-name">Student Details</h2>
-              <p id="modal-student-email" class="text-secondary"></p>
+            <div class="student-profile-titles">
+              <div class="flex-row gap-8 items-center">
+                <h2 id="modal-student-name">Student Profile</h2>
+                <span class="dossier-uni-badge" id="modal-student-uni">University</span>
+                <span class="dossier-risk-badge stable" id="modal-student-risk-badge">Stable</span>
+              </div>
+              <p id="modal-student-email" class="text-secondary" style="font-size: 12.5px;"></p>
             </div>
           </div>
-          <button class="btn-close-modal" onclick="closeStudentModal()"><i class="bx bx-x"></i></button>
+          <div class="flex-row gap-8 items-center">
+            <button type="button" class="btn-secondary small" id="btn-export-dossier" onclick="exportStudentDossier()">
+              <i class="bx bx-download"></i>
+              <span>Export Profile Summary</span>
+            </button>
+            <button class="btn-close-modal" onclick="closeStudentModal()"><i class="bx bx-x"></i></button>
+          </div>
         </div>
-        <div class="modal-body scrollable">
-          <div class="modal-grid-layout full-width">
+        
+        <div class="modal-body scrollable" style="padding: 24px;">
+          <!-- 1. Clinical & Engagement Quick Summary Strip -->
+          <div class="dossier-metrics-strip">
+            <div class="dossier-stat-box">
+              <span class="dossier-stat-label"><i class="bx bx-flame text-amber"></i> Check-in Streak</span>
+              <strong class="dossier-stat-val" id="modal-stat-streak">0 Days</strong>
+            </div>
+            <div class="dossier-stat-box">
+              <span class="dossier-stat-label"><i class="bx bx-book-heart text-teal"></i> Screenings Taken</span>
+              <strong class="dossier-stat-val" id="modal-stat-tests">0 Tests</strong>
+            </div>
+            <div class="dossier-stat-box">
+              <span class="dossier-stat-label"><i class="bx bx-smile text-emerald"></i> Avg Mood Index</span>
+              <strong class="dossier-stat-val text-emerald" id="modal-stat-avgmood">- / 5.0</strong>
+            </div>
+            <div class="dossier-stat-box">
+              <span class="dossier-stat-label"><i class="bx bx-shield-quarter text-plum"></i> Clinical Status</span>
+              <strong class="dossier-stat-val" id="modal-stat-tier">Standard</strong>
+            </div>
+          </div>
+
+          <!-- 2. Main 2-Column Clinical Dossier Grid -->
+          <div class="modal-grid-layout full-width mt-20">
             
-            <!-- Left Card: Profile & Timeline Charts -->
+            <!-- Left Column: Academic Metadata & Longitudinal Mood Trajectory -->
             <div class="grid-left-col">
+              <!-- Academic & Contact Metadata -->
               <div class="section-card glass-card">
-                <h3>Daily Mood Check-ins</h3>
-                <p class="section-subtitle">Student mood rating timeline</p>
-                <div class="canvas-wrapper h-200">
+                <h4 style="font-size: 13.5px; font-weight: 700; color: white; margin-bottom: 12px;">
+                  <i class="bx bxs-id-card text-emerald" style="margin-right: 6px;"></i> Academic Profile & Affiliation
+                </h4>
+                <div class="dossier-info-grid" id="student-dossier-academic">
+                  <div class="info-row">
+                    <span class="info-label">University / Institution</span>
+                    <strong class="info-val" id="dossier-uni-name">-</strong>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Domain Verification</span>
+                    <span class="info-val" id="dossier-uni-domain">-</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Account Joined</span>
+                    <span class="info-val" id="dossier-joined-date">-</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Counselor Assigned</span>
+                    <span class="info-val" id="dossier-assigned-counselor">None (Self-guided)</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Longitudinal Mood Check-in Trajectory -->
+              <div class="section-card glass-card mt-16">
+                <div class="flex-row justify-between items-center mb-8">
+                  <div>
+                    <h4 style="font-size: 13.5px; font-weight: 700; color: white;">
+                      <i class="bx bx-trending-up text-teal" style="margin-right: 6px;"></i> Longitudinal Mood Trajectory
+                    </h4>
+                    <p class="section-subtitle" style="margin: 0; font-size: 11px;">Emotional check-in score progression</p>
+                  </div>
+                </div>
+                <div class="canvas-wrapper" style="height: 180px;">
                   <canvas id="student-mood-line-chart"></canvas>
                 </div>
               </div>
             </div>
 
-            <!-- Right Card: Reflection assessment history -->
+            <!-- Right Column: Reflection Assessment History -->
             <div class="grid-right-col">
               <div class="section-card glass-card h-full flex flex-col">
-                <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 12px;">
                   <div>
-                    <h3>Quiz Reflection History</h3>
-                    <p class="section-subtitle">Completed screening results</p>
+                    <h4 style="font-size: 13.5px; font-weight: 700; color: white;">
+                      <i class="bx bxs-book-heart text-plum" style="margin-right: 6px;"></i> Screening & Diagnostic History
+                    </h4>
+                    <p class="section-subtitle" style="margin: 0; font-size: 11px;">Completed diagnostic screenings & evaluations</p>
                   </div>
                   <!-- Search timeline -->
                   <div class="search-box small">
                     <i class="bx bx-search"></i>
-                    <input type="text" id="search-student-history" placeholder="Filter history..." />
+                    <input type="text" id="search-student-history" placeholder="Filter tests..." />
                   </div>
                 </div>
 
-                <div class="timeline-quiz-list mt-12" id="student-quizzes-list">
-                  <!-- Timeline quiz completions -->
+                <div class="timeline-quiz-list" id="student-quizzes-list">
+                  <!-- Timeline quiz completions rendered dynamically -->
                 </div>
                 
                 <div class="table-pagination" id="student-history-pagination" style="padding-top:12px; margin-top:auto;">
@@ -861,6 +1985,80 @@
       </div>
     </div>
 
+    <!-- Modal: Appointment Detail & Meeting Link Inspector -->
+    <div id="modal-appointment-detail" class="modal-wrapper hidden">
+      <div class="modal-card width-md">
+        <div class="modal-header">
+          <div>
+            <h2 id="app-modal-title">Clinical Encounter Details</h2>
+            <p class="text-secondary" id="app-modal-subtitle">Master Calendar appointment & live video link inspector</p>
+          </div>
+          <button class="btn-close-modal" onclick="closeAppointmentModal()"><i class="bx bx-x"></i></button>
+        </div>
+        <div class="modal-body" style="padding: 24px;">
+          <!-- Key participants -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 10px;">
+              <span style="font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; display: block; margin-bottom: 6px;">Student</span>
+              <strong style="color: white; font-size: 14px; display: block;" id="app-modal-student-name">-</strong>
+              <span style="font-size: 12px; color: rgba(255,255,255,0.5);" id="app-modal-student-email">-</span>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 10px;">
+              <span style="font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; display: block; margin-bottom: 6px;">Counselor</span>
+              <strong style="color: white; font-size: 14px; display: block;" id="app-modal-counselor-name">-</strong>
+              <span style="font-size: 12px; color: rgba(255,255,255,0.5);" id="app-modal-counselor-email">-</span>
+            </div>
+          </div>
+
+          <!-- Time & Status Details -->
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 12px 16px; border-radius: 8px; margin-bottom: 20px;">
+            <div>
+              <div style="font-size: 11px; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: 700;">Scheduled Date & Time</div>
+              <div style="font-size: 13px; font-weight: 600; color: white; margin-top: 2px;" id="app-modal-datetime">-</div>
+            </div>
+            <div id="app-modal-status-badge">
+              <!-- Dynamic Status badge -->
+            </div>
+          </div>
+
+          <!-- Video Room Link Box -->
+          <div style="background: linear-gradient(135deg, rgba(5, 149, 157, 0.1), rgba(122, 91, 147, 0.1)); border: 1px solid rgba(5, 149, 157, 0.3); padding: 16px; border-radius: 10px; margin-bottom: 20px;">
+            <label style="font-size: 11px; font-weight: 700; color: hsl(var(--primary-teal)); text-transform: uppercase; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+              <i class="bx bx-video"></i> Jitsi Encrypted Telehealth Video Room
+            </label>
+            <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+              <input type="text" id="app-modal-video-link" readonly style="flex: 1; font-size: 12px; padding: 8px 12px; border-radius: 6px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); color: white;" />
+              <button id="btn-copy-video-link" class="btn-secondary small" style="font-size: 11px; padding: 6px 12px;">Copy</button>
+            </div>
+            <a id="btn-join-video-room" href="#" target="_blank" class="btn-primary" style="display: inline-flex; align-items: center; justify-content: center; width: 100%; text-decoration: none; font-size: 13px; padding: 10px;">
+              <i class="bx bx-video-plus" style="margin-right: 6px;"></i> Join Telehealth Room as Supervisor
+            </a>
+          </div>
+
+          <!-- Session Topic / Notes -->
+          <div style="margin-bottom: 20px;">
+            <label style="font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; display: block; margin-bottom: 6px;">Intake Notes & Focus Topic</label>
+            <div id="app-modal-notes" style="font-size: 12.5px; color: #cbd5e1; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 12px; border-radius: 8px; line-height: 1.5;">
+              Standard bi-weekly clinical consultation session.
+            </div>
+          </div>
+
+          <!-- Admin Override Controls -->
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 16px;">
+            <button class="btn-secondary" id="btn-modal-cancel-session" style="background: rgba(220, 38, 38, 0.15); border-color: rgba(220, 38, 38, 0.3); color: #f87171; font-size: 12px; padding: 8px 14px;">
+              <i class="bx bx-x-circle"></i> Cancel Session
+            </button>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn-secondary" id="btn-modal-reschedule-session" style="font-size: 12px; padding: 8px 14px;">
+                <i class="bx bx-calendar-edit"></i> Reschedule
+              </button>
+              <button class="btn-primary" onclick="closeAppointmentModal()" style="font-size: 12px; padding: 8px 16px;">Done</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal: Reschedule Master Calendar Session -->
     <div id="modal-reschedule-session" class="modal-wrapper hidden">
       <div class="modal-card width-md">
@@ -924,6 +2122,101 @@
       </div>
     </div>
 
-    <!-- JS Logic script -->
+    <!-- Modal: Modern Logout Confirmation Modal -->
+    <div id="modal-logout-confirm" class="modal-wrapper hidden" style="z-index: 9999;">
+      <div class="modal-card width-sm" style="max-width: 400px; text-align: center;">
+        <div class="modal-body" style="padding: 32px 28px;">
+          <div style="width: 56px; height: 56px; border-radius: 18px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.25); color: #EF4444; font-size: 28px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
+            <i class="bx bx-log-out"></i>
+          </div>
+          <h3 style="font-size: 19px; font-weight: 800; color: white; margin-bottom: 8px;">Sign Out of Portal?</h3>
+          <p style="font-size: 13px; color: #94A3B8; line-height: 1.5; margin-bottom: 24px;">You will need your administrator credentials to access the clinical command center again.</p>
+          <div style="display: flex; gap: 12px; justify-content: center;">
+            <button type="button" class="btn-secondary" id="btn-cancel-logout" style="flex: 1; justify-content: center;">Cancel</button>
+            <button type="button" class="btn-primary" id="btn-confirm-logout" style="flex: 1; justify-content: center; background: linear-gradient(135deg, #DC2626, #B91C1C); border-color: rgba(239,68,68,0.4);">Sign Out</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Add Allowed Domain -->
+    <div id="modal-add-allowed-domain" class="modal-wrapper hidden" style="z-index: 9998;">
+      <div class="modal-card width-md" style="max-width: 480px;">
+        <div class="modal-header">
+          <div>
+            <h2>Add Allowed University Domain</h2>
+            <p class="text-secondary" style="font-size: 12px; margin-top: 2px;">Whitelist student email domain for counseling eligibility</p>
+          </div>
+          <button class="btn-close-modal" id="btn-close-add-domain-modal"><i class="bx bx-x"></i></button>
+        </div>
+        <div class="modal-body" style="padding: 24px;">
+          <form id="form-add-allowed-domain" style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="form-group">
+              <label for="input-new-domain" style="font-size: 13px; font-weight: 600; color: white;">Domain Name <span style="color: #ef4444;">*</span></label>
+              <input type="text" id="input-new-domain" class="form-input" placeholder="e.g. ves.ac.in or @ves.ac.in" required style="background: rgba(15, 23, 42, 0.6); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; width: 100%; font-size: 13px;" />
+              <span style="font-size: 11px; color: #94a3b8; margin-top: 4px; display: block;">Leading '@' is automatically stripped. All student emails ending in this domain will be eligible.</span>
+            </div>
+            <div class="form-group">
+              <label for="input-new-domain-name" style="font-size: 13px; font-weight: 600; color: white;">Institution / Campus Name (Optional)</label>
+              <input type="text" id="input-new-domain-name" class="form-input" placeholder="e.g. Vivekanand Education Society (VESIT)" style="background: rgba(15, 23, 42, 0.6); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; width: 100%; font-size: 13px;" />
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
+              <button type="button" class="btn-secondary" id="btn-cancel-add-domain">Cancel</button>
+              <button type="submit" class="btn-primary" id="btn-submit-add-domain">Save Domain</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Add Bypass Email -->
+    <div id="modal-add-bypass-email" class="modal-wrapper hidden" style="z-index: 9998;">
+      <div class="modal-card width-md" style="max-width: 480px;">
+        <div class="modal-header">
+          <div>
+            <h2>Add Bypass Student Email</h2>
+            <p class="text-secondary" style="font-size: 12px; margin-top: 2px;">Grant human counseling access to an individual email</p>
+          </div>
+          <button class="btn-close-modal" id="btn-close-add-bypass-modal"><i class="bx bx-x"></i></button>
+        </div>
+        <div class="modal-body" style="padding: 24px;">
+          <form id="form-add-bypass-email" style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="form-group">
+              <label for="input-new-bypass-email" style="font-size: 13px; font-weight: 600; color: white;">Student Email Address <span style="color: #ef4444;">*</span></label>
+              <input type="email" id="input-new-bypass-email" class="form-input" placeholder="e.g. jmalani54@gmail.com" required style="background: rgba(15, 23, 42, 0.6); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; width: 100%; font-size: 13px;" />
+              <span style="font-size: 11px; color: #94a3b8; margin-top: 4px; display: block;">This specific user will bypass university domain restrictions and be permitted to book sessions.</span>
+            </div>
+            <div class="form-group">
+              <label for="input-new-bypass-note" style="font-size: 13px; font-weight: 600; color: white;">Note / Purpose (Optional)</label>
+              <input type="text" id="input-new-bypass-note" class="form-input" placeholder="e.g. VIP Student / Admin Testing / Special Exception" style="background: rgba(15, 23, 42, 0.6); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; width: 100%; font-size: 13px;" />
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
+              <button type="button" class="btn-secondary" id="btn-cancel-add-bypass">Cancel</button>
+              <button type="submit" class="btn-primary" id="btn-submit-add-bypass" style="background: linear-gradient(135deg, #9333ea, #7e22ce); border-color: rgba(168,85,247,0.4);">Save Bypass Account</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Delete Access Control Rule Confirm -->
+    <div id="modal-delete-access-rule" class="modal-wrapper hidden" style="z-index: 9999;">
+      <div class="modal-card width-sm" style="max-width: 420px; text-align: center;">
+        <div class="modal-body" style="padding: 28px 24px;">
+          <div style="width: 52px; height: 52px; border-radius: 16px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.25); color: #EF4444; font-size: 26px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
+            <i class="bx bx-trash"></i>
+          </div>
+          <h3 id="delete-access-rule-title" style="font-size: 18px; font-weight: 800; color: white; margin-bottom: 8px;">Remove Rule?</h3>
+          <p id="delete-access-rule-desc" style="font-size: 13px; color: #94A3B8; line-height: 1.5; margin-bottom: 22px;">Are you sure you want to remove this access rule? Affected students will immediately lose university counseling booking privileges.</p>
+          <div style="display: flex; gap: 12px; justify-content: center;">
+            <button type="button" class="btn-secondary" id="btn-cancel-delete-rule" style="flex: 1; justify-content: center;">Cancel</button>
+            <button type="button" class="btn-primary" id="btn-confirm-delete-rule" style="flex: 1; justify-content: center; background: linear-gradient(135deg, #DC2626, #B91C1C); border-color: rgba(239,68,68,0.4);">Delete Rule</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- JS Logic script -->
+
   </body>
 </html>
