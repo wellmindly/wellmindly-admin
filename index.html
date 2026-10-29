@@ -13,8 +13,8 @@
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
     <!-- Chart.js CDN for Visual Analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" crossorigin src="./assets/index-D_r-OIJr.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-D1mh4f_T.css">
+    <script type="module" crossorigin src="./assets/index-DFOv6ObK.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-Bof7zIdl.css">
   </head>
   <body>
     <!-- 1. Authentication Login Screen -->
@@ -932,9 +932,26 @@
                   <option value="RESOLVED">🟢 Resolved</option>
                   <option value="ESCALATED">🔴 Escalated / Urgent</option>
                 </select>
+                <button type="button" class="btn-secondary" id="btn-purge-bots" onclick="purgeNewsletterBots()" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171; white-space: nowrap;">
+                  <i class="bx bx-brush"></i>
+                  <span>Purge Fake Signups</span>
+                </button>
                 <button type="button" class="btn-secondary" id="btn-export-contacts" onclick="exportGeneralContactsCSV()" style="white-space: nowrap;">
                   <i class="bx bx-download"></i>
                   <span id="btn-export-contacts-label">Export CSV</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Bulk Selection Action Bar -->
+            <div id="newsletter-bulk-toolbar" class="bulk-action-bar" style="display: none;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <i class="bx bx-check-square" style="color: #818cf8; font-size: 16px;"></i>
+                <span class="selected-count" id="newsletter-selected-count">0 subscribers selected</span>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn-secondary small" onclick="deleteSelectedSubscribers()" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.4); color: #f87171; cursor: pointer;">
+                  <i class="bx bx-trash"></i> Delete Selected
                 </button>
               </div>
             </div>
