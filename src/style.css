@@ -1672,39 +1672,155 @@ body {
 
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   text-align: left;
 }
 
 .data-table th {
-  padding: 14px 20px;
-  font-size: 12px;
+  padding: 12px 18px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: hsl(var(--text-secondary));
-  border-bottom: 1px solid hsl(var(--border-glass));
-  background: hsl(var(--card-glass) / 0.2);
+  letter-spacing: 0.6px;
+  color: #94a3b8;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
 }
 
 .data-table td {
-  padding: 14px 20px;
-  font-size: 13.5px;
-  font-weight: 500;
-  color: white;
-  border-bottom: 1px solid hsl(var(--border-glass) / 0.4);
+  padding: 12px 18px;
+  font-size: 13px;
+  font-weight: 400;
+  color: #f1f5f9;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: middle;
 }
 
 .data-table tbody tr {
-  transition: background-color var(--transition-smooth);
+  transition: background-color 0.15s ease;
 }
 
 .data-table tbody tr:hover {
-  background-color: hsl(var(--border-glass) / 0.15);
+  background-color: rgba(255, 255, 255, 0.035);
 }
 
 .data-table tbody tr:last-child td {
   border-bottom: none;
+}
+
+/* Modern Operator Chips & Status Badges */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.status-chip .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.status-chip.teal {
+  background: rgba(20, 184, 166, 0.12);
+  color: #2dd4bf;
+  border: 1px solid rgba(20, 184, 166, 0.25);
+}
+.status-chip.teal .dot { background: #2dd4bf; }
+
+.status-chip.amber {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+.status-chip.amber .dot { background: #fbbf24; }
+
+.status-chip.green {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+.status-chip.green .dot { background: #34d399; }
+
+.status-chip.red {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+.status-chip.red .dot { background: #f87171; }
+
+.status-chip.slate {
+  background: rgba(148, 163, 184, 0.12);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+.status-chip.slate .dot { background: #94a3b8; }
+
+/* Table Text Hierarchy & Usability */
+.cell-primary {
+  color: #f8fafc;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: -0.1px;
+}
+
+.cell-secondary {
+  color: #94a3b8;
+  font-weight: 400;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.cell-meta {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.cell-date {
+  color: #94a3b8;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Bulk Action Bar */
+.bulk-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 8px;
+  margin-bottom: 14px;
+  color: #e2e8f0;
+  font-size: 13px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.bulk-action-bar .selected-count {
+  font-weight: 600;
+  color: #818cf8;
+}
+
+.table-checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  accent-color: #05959d;
+  cursor: pointer;
+  vertical-align: middle;
 }
 
 /* Star ratings color */

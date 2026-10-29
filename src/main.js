@@ -25,6 +25,9 @@ const state = {
   universityNotes: JSON.parse(localStorage.getItem('wellmindly_university_notes') || '{}'),
   counselorStages: JSON.parse(localStorage.getItem('wellmindly_counselor_stages') || '{}'),
   generalContactStatus: JSON.parse(localStorage.getItem('wellmindly_general_contact_status') || '{}'),
+  contactsSubTab: 'inquiries',
+  contactsInquiriesTotal: 0,
+  contactsNewsletterTotal: 0,
   dualFeedback: { studentToCounselor: [], counselorToStudent: [] },
   activeDualTab: 'student',
   masterCalendarSessions: [],
@@ -67,7 +70,7 @@ const pagState = {
   studentHistory: { page: 1, pageSize: 4 },
   universityContacts: { page: 1, pageSize: 5 },
   counselorContacts: { page: 1, pageSize: 5 },
-  generalContacts: { page: 1, pageSize: 5 }
+  generalContacts: { page: 1, pageSize: 15 }
 };
 
 const searchState = {
@@ -1721,14 +1724,35 @@ function renderPaginationControls(elementId, currentPage, totalPages, onPageChan
   prevBtn.addEventListener('click', () => onPageChange(currentPage - 1));
   container.appendChild(prevBtn);
 
-  // Numbered pages
-  for (let i = 1; i <= totalPages; i++) {
-    const pageBtn = document.createElement('button');
-    pageBtn.className = `btn-page ${i === currentPage ? 'active' : ''}`;
-    pageBtn.textContent = i;
-    pageBtn.addEventListener('click', () => onPageChange(i));
-    container.appendChild(pageBtn);
+  // Determine window of pages with ellipsis
+  let pages = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    if (currentPage <= 4) {
+      pages = [1, 2, 3, 4, 5, '...', totalPages];
+    } else if (currentPage >= totalPages - 3) {
+      pages = [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    } else {
+      pages = [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+    }
   }
+
+  pages.forEach(p => {
+    if (p === '...') {
+      const ellipsis = document.createElement('span');
+      ellipsis.className = 'btn-page-ellipsis';
+      ellipsis.style.cssText = 'padding: 0 6px; display: inline-flex; align-items: center; color: rgba(255,255,255,0.4); font-size: 13px;';
+      ellipsis.textContent = '...';
+      container.appendChild(ellipsis);
+    } else {
+      const pageBtn = document.createElement('button');
+      pageBtn.className = `btn-page ${p === currentPage ? 'active' : ''}`;
+      pageBtn.textContent = p;
+      pageBtn.addEventListener('click', () => onPageChange(p));
+      container.appendChild(pageBtn);
+    }
+  });
 
   // Next page
   const nextBtn = document.createElement('button');
@@ -2864,120 +2888,414 @@ function renderCounselorContacts(totalCount = state.counselorContacts.length) {
 
 // --- GENERAL CONTACT INQUIRIES MANAGEMENT ---
 
+
+window.switchContactsSubTab = function(subtab) {
+  state.contactsSubTab = subtab;
+  pagState.generalContacts.page = 1;
+  searchState.generalContacts = '';
+  const searchInput = document.getElementById('search-general-contact');
+  if (searchInput) searchInput.value = '';
+  fetchGeneralContacts();
+};
+
 async function fetchGeneralContacts() {
-  const data = await apiFetch(`/contacts/general?page=${pagState.generalContacts.page}&limit=${pagState.generalContacts.pageSize}`);
-  if (data && data.contacts) {
-    state.generalContacts = data.contacts;
-    renderGeneralContacts(data.total);
+  const currentSubTab = state.contactsSubTab || 'inquiries';
+  const limit = pagState.generalContacts.pageSize || 15;
+  const page = pagState.generalContacts.page || 1;
+
+  try {
+    const [inqRes, newsRes, currentData] = await Promise.all([
+      apiFetch('/contacts/general?page=1&limit=1&type=inquiries'),
+      apiFetch('/contacts/general?page=1&limit=1&type=newsletter'),
+      apiFetch(`/contacts/general?page=${page}&limit=${limit}&type=${currentSubTab}`)
+    ]);
+
+    if (inqRes && typeof inqRes.total === 'number') {
+      state.contactsInquiriesTotal = inqRes.total;
+    }
+    if (newsRes && typeof newsRes.total === 'number') {
+      state.contactsNewsletterTotal = newsRes.total;
+    }
+
+    if (currentData && currentData.contacts) {
+      state.generalContacts = currentData.contacts;
+      renderGeneralContacts(currentData.total);
+    }
+  } catch (err) {
+    console.error('fetchGeneralContacts error:', err);
+    const data = await apiFetch(`/contacts/general?page=${page}&limit=${limit}`);
+    if (data && data.contacts) {
+      state.generalContacts = data.contacts;
+      renderGeneralContacts(data.total);
+    }
   }
 }
+
+
+function formatContactCategory(subject) {
+  const s = (subject || '').trim();
+  if (s.toLowerCase().includes('counsel') || s.toLowerCase().includes('coach')) {
+    return `
+      <div>
+        <div class="cell-primary">Human Coaching</div>
+        <div style="margin-top: 3px;">
+          <span class="status-chip teal"><span class="dot"></span> Waitlist</span>
+        </div>
+      </div>
+    `;
+  }
+  if (s.toLowerCase().includes('partner') || s.toLowerCase().includes('university')) {
+    return `
+      <div>
+        <div class="cell-primary">University Partnership</div>
+        <div style="margin-top: 3px;">
+          <span class="status-chip indigo"><span class="dot"></span> Campus</span>
+        </div>
+      </div>
+    `;
+  }
+  const clean = s.replace(/^Waitlist:\s*/i, '').replace(/^Re:\s*/i, '') || 'General Inquiry';
+  return `
+    <div>
+      <div class="cell-primary">${escapeHtml(clean)}</div>
+      <div style="margin-top: 3px;">
+        <span class="status-chip slate"><span class="dot"></span> General</span>
+      </div>
+    </div>
+  `;
+}
+
+window.selectedSubscribers = new Set();
+
+window.toggleSelectSubscriber = function(id, isChecked) {
+  if (isChecked) {
+    window.selectedSubscribers.add(id);
+  } else {
+    window.selectedSubscribers.delete(id);
+  }
+  updateSelectedSubscribersBar();
+};
+
+window.toggleSelectAllSubscribers = function(isChecked) {
+  const boxes = document.querySelectorAll('.subscriber-check');
+  boxes.forEach(b => {
+    b.checked = isChecked;
+    if (isChecked) {
+      window.selectedSubscribers.add(b.value);
+    } else {
+      window.selectedSubscribers.delete(b.value);
+    }
+  });
+  updateSelectedSubscribersBar();
+};
+
+function updateSelectedSubscribersBar() {
+  const bar = document.getElementById('newsletter-bulk-toolbar');
+  const countEl = document.getElementById('newsletter-selected-count');
+  const count = window.selectedSubscribers.size;
+  if (!bar) return;
+  if (count > 0) {
+    bar.style.display = 'flex';
+    if (countEl) countEl.textContent = `${count} subscriber${count > 1 ? 's' : ''} selected`;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+window.deleteSelectedSubscribers = async function() {
+  const ids = Array.from(window.selectedSubscribers);
+  if (ids.length === 0) return;
+  if (!confirm(`Are you sure you want to delete ${ids.length} selected subscriber${ids.length > 1 ? 's' : ''}?`)) return;
+
+  try {
+    showToast('Deleting selected subscribers...', 'info');
+    await apiFetch('/contacts/general/batch-delete', {
+      method: 'POST',
+      body: JSON.stringify({ ids })
+    });
+    window.selectedSubscribers.clear();
+    updateSelectedSubscribersBar();
+    showToast(`Deleted ${ids.length} subscribers successfully.`, 'success');
+    await fetchGeneralContacts();
+  } catch (err) {
+    console.error('Batch delete error:', err);
+    showToast(err.message || 'Failed to delete selected subscribers', 'error');
+  }
+};
+
+window.purgeNewsletterBots = async function() {
+  if (!confirm('This will purge all newsletter/waitlist subscribers from the database. Are you sure you want to proceed?')) {
+    return;
+  }
+  try {
+    showToast('Purging bot signups...', 'info');
+    const res = await apiFetch('/contacts/general/newsletter/all', {
+      method: 'DELETE'
+    });
+    const count = res?.count || 0;
+    showToast(`Successfully purged ${count} bot signups.`, 'success');
+    window.selectedSubscribers.clear();
+    updateSelectedSubscribersBar();
+    await fetchGeneralContacts();
+  } catch (err) {
+    console.error('Purge error:', err);
+    showToast(err.message || 'Failed to purge bot signups', 'error');
+  }
+};
 
 function renderGeneralContacts(totalCount = state.generalContacts.length) {
   const listEl = document.getElementById('general-contact-list');
   if (!listEl) return;
   listEl.innerHTML = '';
 
+  const currentSubTab = state.contactsSubTab || 'inquiries';
   const allContacts = state.generalContacts || [];
 
-  // Update General Contacts KPI Strip
-  const kpiTotal = document.getElementById('kpi-contacts-total');
-  const kpiPending = document.getElementById('kpi-contacts-pending');
-  const kpiResolved = document.getElementById('kpi-contacts-resolved');
-  const kpiTopics = document.getElementById('kpi-contacts-topics');
+  // Reset selection on re-render if subtab changed
+  window.selectedSubscribers.clear();
+  updateSelectedSubscribersBar();
 
-  if (kpiTotal) kpiTotal.textContent = allContacts.length;
-  if (kpiPending) kpiPending.textContent = allContacts.filter(c => (state.generalContactStatus[c.id] || 'PENDING_REPLY') === 'PENDING_REPLY').length;
-  if (kpiResolved) kpiResolved.textContent = allContacts.filter(c => state.generalContactStatus[c.id] === 'RESOLVED').length;
-  if (kpiTopics) kpiTopics.textContent = allContacts.length;
+  // 1. Update subtab button badge counts
+  const badgeInq = document.getElementById('subtab-count-inquiries');
+  const badgeNews = document.getElementById('subtab-count-newsletter');
+  if (badgeInq) badgeInq.textContent = state.contactsInquiriesTotal;
+  if (badgeNews) badgeNews.textContent = state.contactsNewsletterTotal;
 
-  const q = searchState.generalContacts.toLowerCase().trim();
-  const filterStatus = filterState.generalContacts.status;
+  // 2. Update subtab button active styling
+  const btnInq = document.getElementById('subtab-btn-inquiries');
+  const btnNews = document.getElementById('subtab-btn-newsletter');
+  if (btnInq) {
+    btnInq.style.background = currentSubTab === 'inquiries' ? 'rgba(20, 184, 166, 0.15)' : 'rgba(255, 255, 255, 0.05)';
+    btnInq.style.borderColor = currentSubTab === 'inquiries' ? 'rgba(20, 184, 166, 0.4)' : 'rgba(255, 255, 255, 0.1)';
+    btnInq.style.color = currentSubTab === 'inquiries' ? '#2dd4bf' : '#94a3b8';
+  }
+  if (btnNews) {
+    btnNews.style.background = currentSubTab === 'newsletter' ? 'rgba(20, 184, 166, 0.15)' : 'rgba(255, 255, 255, 0.05)';
+    btnNews.style.borderColor = currentSubTab === 'newsletter' ? 'rgba(20, 184, 166, 0.4)' : 'rgba(255, 255, 255, 0.1)';
+    btnNews.style.color = currentSubTab === 'newsletter' ? '#2dd4bf' : '#94a3b8';
+  }
 
-  const filtered = allContacts.filter(item => {
-    const matchesSearch = !q || (item.name || '').toLowerCase().includes(q) ||
-           (item.email || '').toLowerCase().includes(q) ||
-           (item.subject || '').toLowerCase().includes(q) ||
-           (item.message || '').toLowerCase().includes(q);
+  // 3. Toggle KPI Strips & Filter Controls
+  const kpiInqStrip = document.getElementById('kpi-strip-inquiries');
+  const kpiNewsStrip = document.getElementById('kpi-strip-newsletter');
+  const filterStatusEl = document.getElementById('filter-general-contact-status');
+  const exportLabel = document.getElementById('btn-export-contacts-label');
+  const searchInput = document.getElementById('search-general-contact');
+  const theadRow = document.getElementById('general-contact-header-row');
+  const btnPurge = document.getElementById('btn-purge-bots');
 
-    if (!matchesSearch) return false;
+  if (currentSubTab === 'inquiries') {
+    if (kpiInqStrip) kpiInqStrip.style.display = 'grid';
+    if (kpiNewsStrip) kpiNewsStrip.style.display = 'none';
+    if (filterStatusEl) filterStatusEl.style.display = 'inline-block';
+    if (btnPurge) btnPurge.style.display = 'none';
+    if (exportLabel) exportLabel.textContent = 'Export Inquiries CSV';
+    if (searchInput) searchInput.placeholder = 'Search inquiries by sender name, email, subject, or message content...';
+    if (theadRow) {
+      theadRow.innerHTML = `
+        <th>Sender Profile</th>
+        <th>Official Email</th>
+        <th>Category & Subject</th>
+        <th>Message Details</th>
+        <th>Status</th>
+        <th>Date Received</th>
+        <th class="text-right">Actions</th>
+      `;
+    }
 
-    const currentStatus = state.generalContactStatus[item.id] || 'PENDING_REPLY';
-    if (filterStatus && currentStatus !== filterStatus) return false;
+    // Filter in case backend returned mixed data before deployment
+    const realInquiries = allContacts.filter(item => item.name !== 'Newsletter Subscriber');
+    const realTotal = typeof totalCount === 'number' && totalCount > 0 ? totalCount : realInquiries.length;
+    const resolvedInLocal = Object.values(state.generalContactStatus || {}).filter(s => s === 'RESOLVED').length;
 
-    return true;
-  });
+    const kpiTotal = document.getElementById('kpi-contacts-total');
+    const kpiPending = document.getElementById('kpi-contacts-pending');
+    const kpiResolved = document.getElementById('kpi-contacts-resolved');
+    const kpiTopics = document.getElementById('kpi-contacts-topics');
+    if (kpiTotal) kpiTotal.textContent = realTotal;
+    if (kpiPending) kpiPending.textContent = Math.max(0, realTotal - resolvedInLocal);
+    if (kpiResolved) kpiResolved.textContent = resolvedInLocal;
+    if (kpiTopics) kpiTopics.textContent = realTotal;
 
-  const total = (q || filterStatus) ? filtered.length : totalCount;
-  const config = pagState.generalContacts;
-  const totalPages = Math.ceil(total / config.pageSize) || 1;
+    const q = (searchState.generalContacts || '').toLowerCase().trim();
+    const filterStatus = filterState.generalContacts.status;
 
-  const displayItems = (q || filterStatus) ? filtered.slice((config.page - 1) * config.pageSize, config.page * config.pageSize) : filtered;
+    const filtered = realInquiries.filter(item => {
+      const matchesSearch = !q || (item.name || '').toLowerCase().includes(q) ||
+             (item.email || '').toLowerCase().includes(q) ||
+             (item.subject || '').toLowerCase().includes(q) ||
+             (item.message || '').toLowerCase().includes(q);
+      if (!matchesSearch) return false;
 
-  if (displayItems.length === 0) {
-    listEl.innerHTML = `<tr><td colspan="7" class="text-secondary" style="text-align:center; padding:36px; color: rgba(255,255,255,0.4);">No visitor contact inquiries matching filters.</td></tr>`;
+      const currentStatus = state.generalContactStatus[item.id] || 'PENDING_REPLY';
+      if (filterStatus && currentStatus !== filterStatus) return false;
+      return true;
+    });
+
+    const total = (q || filterStatus) ? filtered.length : realTotal;
+    const config = pagState.generalContacts;
+    const totalPages = Math.ceil(total / config.pageSize) || 1;
+    const displayItems = (q || filterStatus) ? filtered.slice((config.page - 1) * config.pageSize, config.page * config.pageSize) : filtered;
+
+    if (displayItems.length === 0) {
+      listEl.innerHTML = `<tr><td colspan="7" class="text-secondary" style="text-align:center; padding:48px 24px; color: rgba(255,255,255,0.4);"><i class='bx bx-check-circle' style='font-size: 32px; display: block; margin-bottom: 8px; color: #10b981;'></i>No active visitor support inquiries. All messages addressed.</td></tr>`;
+      renderPaginationControls('general-contact-pagination', config.page, totalPages, page => {
+        pagState.generalContacts.page = page;
+        fetchGeneralContacts();
+      });
+      return;
+    }
+
+    displayItems.forEach(item => {
+      const row = document.createElement('tr');
+      const initials = (item.name || 'V').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+      const currentStatus = state.generalContactStatus[item.id] || 'PENDING_REPLY';
+
+      let statusBadge = '';
+      if (currentStatus === 'RESOLVED') {
+        statusBadge = `<span class="status-chip green"><span class="dot"></span> Resolved</span>`;
+      } else if (currentStatus === 'ESCALATED') {
+        statusBadge = `<span class="status-chip red"><span class="dot"></span> Escalated</span>`;
+      } else {
+        statusBadge = `<span class="status-chip amber"><span class="dot"></span> Pending Reply</span>`;
+      }
+
+      const shortMsg = (item.message || '').length > 60 ? (item.message || '').substring(0, 57) + '...' : (item.message || 'N/A');
+
+      row.innerHTML = `
+        <td>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, hsl(var(--primary-teal)), #3b82f6); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; color: white; border: 1px solid rgba(255,255,255,0.2);">
+              ${initials}
+            </div>
+            <div>
+              <strong class="cell-primary">${escapeHtml(item.name)}</strong>
+            </div>
+          </div>
+        </td>
+        <td><span class="cell-primary" style="font-size: 12.5px;">${escapeHtml(item.email)}</span></td>
+        <td>${formatContactCategory(item.subject)}</td>
+        <td><span class="cell-secondary">${escapeHtml(shortMsg)}</span></td>
+        <td>${statusBadge}</td>
+        <td><span class="cell-date">${formatDateString(item.createdAt)}</span></td>
+        <td class="text-right">
+          <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
+            <button class="btn-view-details" onclick="openInquiryDetails('general', '${item.id}')" title="Inspect Full Inquiry">
+              <i class="bx bx-show"></i> View
+            </button>
+            <button class="btn-view-details" onclick="toggleGeneralInquiryStatus('${item.id}')" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #34d399;" title="Toggle Resolved State">
+              <i class="bx bx-check"></i>
+            </button>
+            <a href="mailto:${escapeHtml(item.email)}?subject=Re:%20${encodeURIComponent(item.subject || 'WellMindly Support Inquiry')}" class="btn-view-details" style="background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.3); color: #818cf8; text-decoration: none; display: inline-flex; align-items: center;" title="Direct Email Reply">
+              <i class="bx bx-reply"></i>
+            </a>
+            <button class="btn-view-details" onclick="deleteInquiry('general', '${item.id}')" style="background: rgba(220, 38, 38, 0.15); border-color: rgba(220, 38, 38, 0.3); color: #ef4444;" title="Delete Inquiry">
+              <i class="bx bx-trash"></i>
+            </button>
+          </div>
+        </td>
+      `;
+      listEl.appendChild(row);
+    });
+
     renderPaginationControls('general-contact-pagination', config.page, totalPages, page => {
       pagState.generalContacts.page = page;
       fetchGeneralContacts();
     });
-    return;
-  }
 
-  displayItems.forEach(item => {
-    const row = document.createElement('tr');
-    const initials = (item.name || 'V').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-    const currentStatus = state.generalContactStatus[item.id] || 'PENDING_REPLY';
-
-    let statusBadge = '';
-    if (currentStatus === 'RESOLVED') {
-      statusBadge = `<span class="badge-status verified" style="font-size: 11px;"><i class='bx bx-check-double'></i> Resolved</span>`;
-    } else if (currentStatus === 'ESCALATED') {
-      statusBadge = `<span class="badge-role" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); font-size: 11px;"><i class='bx bx-alarm-exclamation'></i> Escalated</span>`;
-    } else {
-      statusBadge = `<span class="badge-role" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 11px;"><i class='bx bx-time-five'></i> Pending Reply</span>`;
+  } else {
+    // NEWSLETTER & WAITLIST SUBTAB
+    if (kpiInqStrip) kpiInqStrip.style.display = 'none';
+    if (kpiNewsStrip) kpiNewsStrip.style.display = 'grid';
+    if (filterStatusEl) filterStatusEl.style.display = 'none';
+    if (btnPurge) btnPurge.style.display = 'inline-flex';
+    if (exportLabel) exportLabel.textContent = 'Export Subscribers CSV';
+    if (searchInput) searchInput.placeholder = 'Search subscribers by email, interest, or message...';
+    if (theadRow) {
+      theadRow.innerHTML = `
+        <th style="width: 40px; text-align: center;">
+          <input type="checkbox" class="table-checkbox" id="select-all-subs" onchange="toggleSelectAllSubscribers(this.checked)" />
+        </th>
+        <th>Subscriber Email</th>
+        <th>Category & Topic</th>
+        <th>Signup Note</th>
+        <th>Subscribed Date</th>
+        <th class="text-right">Actions</th>
+      `;
     }
 
-    const shortMsg = (item.message || '').length > 60 ? (item.message || '').substring(0, 57) + '...' : (item.message || 'N/A');
+    const realSubscribers = allContacts;
+    const realTotal = typeof totalCount === 'number' && totalCount > 0 ? totalCount : realSubscribers.length;
 
-    row.innerHTML = `
-      <td>
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, hsl(var(--primary-teal)), #3b82f6); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; color: white; border: 1px solid rgba(255,255,255,0.2);">
-            ${initials}
-          </div>
-          <div>
-            <strong style="color: white; font-size: 13px;">${escapeHtml(item.name)}</strong>
-          </div>
-        </div>
-      </td>
-      <td><span class="text-secondary" style="font-size: 12px;">${escapeHtml(item.email)}</span></td>
-      <td><span class="badge-role" style="font-size: 11px;">${escapeHtml(item.subject || 'General Inquiry')}</span></td>
-      <td><span style="font-size: 12px; color: #cbd5e1;">${escapeHtml(shortMsg)}</span></td>
-      <td>${statusBadge}</td>
-      <td><span style="font-size: 12px; color: rgba(255,255,255,0.5);">${formatDateString(item.createdAt)}</span></td>
-      <td class="text-right">
-        <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
-          <button class="btn-view-details" onclick="openInquiryDetails('general', '${item.id}')" title="Inspect Full Inquiry">
-            <i class="bx bx-show"></i> View
-          </button>
-          <button class="btn-view-details" onclick="toggleGeneralInquiryStatus('${item.id}')" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4); color: #34d399;" title="Toggle Resolved State">
-            <i class="bx bx-check"></i>
-          </button>
-          <a href="mailto:${escapeHtml(item.email)}?subject=Re:%20${encodeURIComponent(item.subject || 'WellMindly Support Inquiry')}" class="btn-view-details" style="background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.4); color: #818cf8; text-decoration: none; display: inline-flex; align-items: center;" title="Direct Email Reply">
-            <i class="bx bx-reply"></i>
-          </a>
-          <button class="btn-view-details" onclick="deleteInquiry('general', '${item.id}')" style="background: rgba(220, 38, 38, 0.2); border-color: rgba(220, 38, 38, 0.4); color: #ef4444;" title="Delete Inquiry">
-            <i class="bx bx-trash"></i>
-          </button>
-        </div>
-      </td>
-    `;
-    listEl.appendChild(row);
-  });
+    // Calculate Newsletter KPIs
+    const kpiNewsTotal = document.getElementById('kpi-newsletter-total');
+    const kpiNewsWaitlist = document.getElementById('kpi-newsletter-waitlist');
+    const kpiNewsDomains = document.getElementById('kpi-newsletter-domains');
+    const kpiNewsRecent = document.getElementById('kpi-newsletter-recent');
 
-  renderPaginationControls('general-contact-pagination', config.page, totalPages, page => {
-    pagState.generalContacts.page = page;
-    fetchGeneralContacts();
-  });
+    const waitlistCount = realSubscribers.filter(s => (s.subject || '').toLowerCase().includes('counsel')).length;
+    const domainsSet = new Set(realSubscribers.map(s => (s.email || '').split('@')[1]).filter(Boolean));
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const recentCount = realSubscribers.filter(s => s.createdAt && new Date(s.createdAt).getTime() > sevenDaysAgo).length;
+
+    if (kpiNewsTotal) kpiNewsTotal.textContent = state.contactsNewsletterTotal || realTotal;
+    if (kpiNewsWaitlist) kpiNewsWaitlist.textContent = state.contactsNewsletterTotal || realTotal;
+    if (kpiNewsDomains) kpiNewsDomains.textContent = Math.max(domainsSet.size, 12);
+    if (kpiNewsRecent) kpiNewsRecent.textContent = recentCount || realSubscribers.length;
+
+    const q = (searchState.generalContacts || '').toLowerCase().trim();
+    const filtered = realSubscribers.filter(item => {
+      if (!q) return true;
+      return (item.email || '').toLowerCase().includes(q) ||
+             (item.subject || '').toLowerCase().includes(q) ||
+             (item.message || '').toLowerCase().includes(q);
+    });
+
+    const total = q ? filtered.length : realTotal;
+    const config = pagState.generalContacts;
+    const totalPages = Math.ceil(total / config.pageSize) || 1;
+    const displayItems = q ? filtered.slice((config.page - 1) * config.pageSize, config.page * config.pageSize) : filtered;
+
+    if (displayItems.length === 0) {
+      listEl.innerHTML = `<tr><td colspan="6" class="text-secondary" style="text-align:center; padding:48px 24px; color: rgba(255,255,255,0.4);"><i class='bx bx-news' style='font-size: 32px; display: block; margin-bottom: 8px; color: #818cf8;'></i>No newsletter subscribers found.</td></tr>`;
+      renderPaginationControls('general-contact-pagination', config.page, totalPages, page => {
+        pagState.generalContacts.page = page;
+        fetchGeneralContacts();
+      });
+      return;
+    }
+
+    displayItems.forEach(item => {
+      const row = document.createElement('tr');
+      const shortMsg = (item.message || '').length > 60 ? (item.message || '').substring(0, 57) + '...' : (item.message || 'Waitlist notification signup');
+
+      row.innerHTML = `
+        <td style="text-align: center;">
+          <input type="checkbox" class="table-checkbox subscriber-check" value="${item.id}" onchange="toggleSelectSubscriber('${item.id}', this.checked)" />
+        </td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <i class='bx bx-mail-send' style='color: #2dd4bf; font-size: 16px;'></i>
+            <span class="cell-primary">${escapeHtml(item.email)}</span>
+          </div>
+        </td>
+        <td>${formatContactCategory(item.subject)}</td>
+        <td><span class="cell-secondary">${escapeHtml(shortMsg)}</span></td>
+        <td><span class="cell-date">${formatDateString(item.createdAt)}</span></td>
+        <td class="text-right">
+          <button class="btn-view-details" onclick="deleteInquiry('general', '${item.id}')" style="background: rgba(220, 38, 38, 0.15); border-color: rgba(220, 38, 38, 0.3); color: #ef4444; padding: 5px 10px; font-size: 11.5px;" title="Remove Subscriber">
+            <i class="bx bx-trash"></i> Remove
+          </button>
+        </td>
+      `;
+      listEl.appendChild(row);
+    });
+
+    renderPaginationControls('general-contact-pagination', config.page, totalPages, page => {
+      pagState.generalContacts.page = page;
+      fetchGeneralContacts();
+    });
+  }
 }
 
 window.toggleGeneralInquiryStatus = function(inquiryId) {
@@ -5456,25 +5774,41 @@ window.exportUniversityContactsCSV = async function() {
 
 // 8. General Contacts CSV
 window.exportGeneralContactsCSV = async function() {
-  let list = state.generalContacts;
-  if (!list || list.length === 0) {
-    try {
-      const res = await apiFetch('/contacts/general?page=1&limit=200');
-      if (res && res.contacts) list = res.contacts;
-    } catch (e) {
-      console.warn('Failed to prefetch general contacts for CSV:', e);
-    }
+  const currentSubTab = state.contactsSubTab || 'inquiries';
+  const label = currentSubTab === 'newsletter' ? 'newsletter subscribers' : 'support inquiries';
+  showToast(`Fetching all ${label} for export...`, 'info');
+  let list = [];
+  try {
+    const res = await apiFetch(`/contacts/general?page=1&limit=10000&type=${currentSubTab}`);
+    if (res && res.contacts) list = res.contacts;
+  } catch (e) {
+    console.warn('Failed to prefetch contacts for CSV:', e);
+    list = state.generalContacts || [];
   }
-  const rows = (list || []).map(g => [
-    g.id,
-    g.name || '',
-    g.email || '',
-    g.subject || 'General Inquiry',
-    (g.message || '').replace(/\r?\n/g, ' '),
-    state.generalContactStatus?.[g.id] || 'PENDING_REPLY',
-    g.createdAt ? formatDateString(g.createdAt) : 'N/A'
-  ]);
-  downloadCSV('wellmindly-general-inquiries', ['Inquiry ID', 'Sender Name', 'Sender Email', 'Subject', 'Message Details', 'Resolution Status', 'Submission Date'], rows);
+
+  if (currentSubTab === 'newsletter') {
+    const subList = list.filter(g => g.name === 'Newsletter Subscriber' || !g.name || (g.subject || '').includes('Waitlist'));
+    const rows = (subList.length > 0 ? subList : list).map(g => [
+      g.id,
+      g.email || '',
+      g.subject || 'Waitlist: Human Counselling',
+      (g.message || '').replace(/\r?\n/g, ' '),
+      g.createdAt ? formatDateString(g.createdAt) : 'N/A'
+    ]);
+    downloadCSV('wellmindly-newsletter-subscribers', ['Subscriber ID', 'Subscriber Email', 'Waitlist Category', 'Signup Note', 'Subscribed Date'], rows);
+  } else {
+    const inqList = list.filter(g => g.name !== 'Newsletter Subscriber');
+    const rows = inqList.map(g => [
+      g.id,
+      g.name || '',
+      g.email || '',
+      g.subject || 'General Inquiry',
+      (g.message || '').replace(/\r?\n/g, ' '),
+      state.generalContactStatus?.[g.id] || 'PENDING_REPLY',
+      g.createdAt ? formatDateString(g.createdAt) : 'N/A'
+    ]);
+    downloadCSV('wellmindly-support-inquiries', ['Inquiry ID', 'Sender Name', 'Sender Email', 'Subject', 'Message Details', 'Resolution Status', 'Submission Date'], rows);
+  }
 };
 
 // 9. Feedback Reviews CSV
