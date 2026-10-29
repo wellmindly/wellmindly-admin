@@ -12,8 +12,8 @@
     <!-- Boxicons for Icons -->
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
     <!-- Chart.js CDN for Visual Analytics -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" crossorigin src="./assets/index-wLyhEy0s.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module" crossorigin src="./assets/index-D_r-OIJr.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-D1mh4f_T.css">
   </head>
   <body>
@@ -836,10 +836,20 @@
             </div>
           </div>
 
-          <!-- TAB: General Contacts (Inquiries Manager) -->
+          <!-- TAB: General Contacts (Inquiries & Newsletter Manager) -->
           <div id="tab-contacts" class="tab-pane hidden">
-            <!-- General Contacts KPI Strip -->
-            <div class="kpi-grid" style="margin-bottom: 20px;">
+            <!-- Contacts Sub-Navigation Tabs -->
+            <div class="sub-nav-tabs" style="display: flex; gap: 10px; margin-bottom: 20px;">
+              <button type="button" class="btn-subtab" id="subtab-btn-inquiries" onclick="switchContactsSubTab('inquiries')" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 8px; border: 1px solid rgba(20, 184, 166, 0.4); background: rgba(20, 184, 166, 0.15); color: #2dd4bf; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s;">
+                <i class="bx bx-envelope" style="font-size: 16px;"></i> Support Inquiries (<span id="subtab-count-inquiries">0</span>)
+              </button>
+              <button type="button" class="btn-subtab" id="subtab-btn-newsletter" onclick="switchContactsSubTab('newsletter')" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); color: #94a3b8; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s;">
+                <i class="bx bx-news" style="font-size: 16px;"></i> Newsletter & Waitlist (<span id="subtab-count-newsletter">0</span>)
+              </button>
+            </div>
+
+            <!-- General Contacts KPI Strip (Support Inquiries) -->
+            <div id="kpi-strip-inquiries" class="kpi-grid" style="margin-bottom: 20px;">
               <div class="kpi-card glow-card">
                 <div class="kpi-icon icon-teal"><i class="bx bx-envelope"></i></div>
                 <div class="kpi-data">
@@ -874,6 +884,42 @@
               </div>
             </div>
 
+            <!-- Newsletter Subscribers KPI Strip -->
+            <div id="kpi-strip-newsletter" class="kpi-grid" style="margin-bottom: 20px; display: none;">
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-teal"><i class="bx bx-news"></i></div>
+                <div class="kpi-data">
+                  <h3>Total Subscribers</h3>
+                  <p class="kpi-value" id="kpi-newsletter-total">0</p>
+                  <p class="kpi-meta text-secondary">Newsletter & waitlist audience</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-blue"><i class="bx bx-user-check"></i></div>
+                <div class="kpi-data">
+                  <h3>Counselling Waitlist</h3>
+                  <p class="kpi-value text-sky" id="kpi-newsletter-waitlist">0</p>
+                  <p class="kpi-meta text-secondary">Students awaiting coaching</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card">
+                <div class="kpi-icon icon-plum"><i class="bx bx-globe"></i></div>
+                <div class="kpi-data">
+                  <h3>Unique Domains</h3>
+                  <p class="kpi-value" id="kpi-newsletter-domains">0</p>
+                  <p class="kpi-meta text-secondary">Campus & provider domains</p>
+                </div>
+              </div>
+              <div class="kpi-card glow-card border-warning">
+                <div class="kpi-icon icon-warning"><i class="bx bx-calendar-star"></i></div>
+                <div class="kpi-data">
+                  <h3>Recent Signups</h3>
+                  <p class="kpi-value text-amber" id="kpi-newsletter-recent">0</p>
+                  <p class="kpi-meta text-secondary">Latest batch additions</p>
+                </div>
+              </div>
+            </div>
+
             <div class="filter-bar glass-card" style="display: flex; gap: 14px; align-items: center;">
               <div class="search-box" style="flex: 1;">
                 <i class="bx bx-search"></i>
@@ -886,17 +932,17 @@
                   <option value="RESOLVED">🟢 Resolved</option>
                   <option value="ESCALATED">🔴 Escalated / Urgent</option>
                 </select>
-                <button type="button" class="btn-secondary" onclick="exportGeneralContactsCSV()" style="white-space: nowrap;">
+                <button type="button" class="btn-secondary" id="btn-export-contacts" onclick="exportGeneralContactsCSV()" style="white-space: nowrap;">
                   <i class="bx bx-download"></i>
-                  <span>Export CSV</span>
+                  <span id="btn-export-contacts-label">Export CSV</span>
                 </button>
               </div>
             </div>
 
             <div class="table-container glass-card">
               <table class="data-table">
-                <thead>
-                  <tr>
+                <thead id="general-contact-thead">
+                  <tr id="general-contact-header-row">
                     <th>Sender Profile</th>
                     <th>Official Email</th>
                     <th>Subject Category</th>
@@ -2216,7 +2262,7 @@
       </div>
     </div>
 
-    <!-- JS Logic script -->
+    <!-- JS Logic script -->
 
   </body>
 </html>
