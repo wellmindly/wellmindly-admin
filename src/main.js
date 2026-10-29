@@ -2119,8 +2119,8 @@ function renderFeedbackList() {
           </div>
         </div>
       </td>
-      <td><span class="badge-role" style="font-size: 11px;">${escapeHtml(survey.q3 || 'Undecided')}</span></td>
-      <td><span class="badge-role" style="font-size: 11px; background: rgba(99, 102, 241, 0.15); color: #818cf8; border-color: rgba(99, 102, 241, 0.3);">${escapeHtml(survey.q4 || 'General')}</span></td>
+      <td><span class="cell-primary" style="font-size: 12.5px;">${escapeHtml(survey.q3 || 'Undecided')}</span></td>
+      <td><span class="status-chip indigo">${escapeHtml(survey.q4 || 'General')}</span></td>
       <td><p style="font-size: 12px; color: #cbd5e1; margin: 0; max-width: 240px; line-height: 1.4;">${shortQ1}</p></td>
       <td class="text-right">
         <button class="btn-view-details" onclick="openSurveyModal('${fb.id}')" title="Inspect Full 6-Question Survey">
@@ -2693,13 +2693,13 @@ function renderUniversityContacts(totalCount = state.universityContacts.length) 
 
     let stageBadge = '';
     if (stage === 'PARTNERED') {
-      stageBadge = `<span class="badge-status verified" style="font-size: 11px;"><i class='bx bx-check-shield'></i> Partnered Campus</span>`;
+      stageBadge = `<span class="status-chip green"><span class="dot"></span> Partnered Campus</span>`;
     } else if (stage === 'DEMO_SCHEDULED') {
-      stageBadge = `<span class="badge-role" style="background: rgba(99, 102, 241, 0.2); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.4); font-size: 11px;"><i class='bx bx-calendar-check'></i> Demo Scheduled</span>`;
+      stageBadge = `<span class="status-chip teal"><span class="dot"></span> Demo Scheduled</span>`;
     } else if (stage === 'CONTACTED') {
-      stageBadge = `<span class="badge-role" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 11px;"><i class='bx bx-mail-send'></i> Contacted</span>`;
+      stageBadge = `<span class="status-chip amber"><span class="dot"></span> Contacted</span>`;
     } else {
-      stageBadge = `<span class="badge-role" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 11px;"><i class='bx bx-bell'></i> New Lead</span>`;
+      stageBadge = `<span class="status-chip indigo"><span class="dot"></span> New Lead</span>`;
     }
 
     row.innerHTML = `
@@ -2715,7 +2715,7 @@ function renderUniversityContacts(totalCount = state.universityContacts.length) 
         </div>
       </td>
       <td><span style="font-size: 12.5px; font-weight: 600; color: #cbd5e1;">${escapeHtml(item.name)}</span></td>
-      <td><span class="badge-role" style="font-size: 11px;">${escapeHtml(item.role)}</span></td>
+      <td><span class="cell-secondary">${escapeHtml(item.role || 'Campus Official')}</span></td>
       <td><span class="text-secondary" style="font-size: 12px;">${escapeHtml(item.email)}</span></td>
       <td>${stageBadge}</td>
       <td><span style="font-size: 12px; color: rgba(255,255,255,0.5);">${formatDateString(item.createdAt)}</span></td>
@@ -3747,7 +3747,7 @@ function renderDualFeedback() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><strong style="color: white; font-size: 13px;">${escapeHtml(studentName)}</strong></td>
-          <td><span class="badge-role" style="background: rgba(122, 91, 147, 0.2); color: #d8b4fe; border-color: rgba(122, 91, 147, 0.35); font-size: 11.5px;">${escapeHtml(counselorName)}</span></td>
+          <td><span class="cell-primary">${escapeHtml(counselorName)}</span></td>
           <td><div style="display: flex; align-items: center; gap: 4px;">${stars} <span style="font-size: 11px; font-weight: 700; color: white; margin-left: 4px;">${item.rating}.0</span></div></td>
           <td><span style="font-size: 12.5px; color: #cbd5e1; line-height: 1.4;">${escapeHtml(item.comments || 'No written comment.')}</span></td>
           <td><span style="font-size: 12px; color: rgba(255,255,255,0.5);">${formatDateString(item.createdAt)}</span></td>
@@ -3784,9 +3784,9 @@ function renderDualFeedback() {
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td><span class="badge-role" style="background: rgba(122, 91, 147, 0.2); color: #d8b4fe; border-color: rgba(122, 91, 147, 0.35); font-size: 11.5px;">${escapeHtml(counselorName)}</span></td>
+          <td><span class="cell-primary">${escapeHtml(counselorName)}</span></td>
           <td><strong style="color: white; font-size: 13px;">${escapeHtml(studentName)}</strong></td>
-          <td><span class="badge-status verified" style="font-size: 11px;">Engagement: ${item.rating}/5</span></td>
+          <td><span class="status-chip teal"><i class='bx bxs-star'></i> ${item.rating}/5</span></td>
           <td><span style="font-size: 12.5px; color: #cbd5e1; line-height: 1.4;">${escapeHtml(item.summaryNote || 'Clinical progress notes logged.')}</span></td>
           <td><span style="font-size: 12px; color: rgba(255,255,255,0.5);">${formatDateString(item.createdAt)}</span></td>
           <td class="text-right">
@@ -3960,11 +3960,11 @@ function renderFlaggedQueue() {
     
     let reasonBadge = '';
     if (isCrisis) {
-      reasonBadge = `<span class="badge-role" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); font-weight: 600; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;"><i class='bx bx-error-alt'></i> AI Crisis Flag</span>`;
+      reasonBadge = `<span class="status-chip red"><span class="dot"></span> AI Crisis Flag</span>`;
     } else if (isUserReport) {
-      reasonBadge = `<span class="badge-role" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-weight: 600; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;"><i class='bx bx-flag'></i> User Reported</span>`;
+      reasonBadge = `<span class="status-chip amber"><span class="dot"></span> User Reported</span>`;
     } else {
-      reasonBadge = `<span class="badge-role" style="background: rgba(122, 91, 147, 0.2); color: #c084fc; border: 1px solid rgba(122, 91, 147, 0.4); font-size: 11px;">Muted / Pending</span>`;
+      reasonBadge = `<span class="status-chip slate"><span class="dot"></span> Muted / Pending</span>`;
     }
 
     const noteContentSafe = escapeHtml(note.content || '').replace(/'/g, "\\'");
@@ -3973,9 +3973,7 @@ function renderFlaggedQueue() {
     html += `
       <tr>
         <td>
-          <span class="badge-role" style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-weight: 700; font-size: 11px; padding: 2px 6px; border-radius: 4px;">
-            Note
-          </span>
+          <span class="status-chip teal">Note</span>
         </td>
         <td>
           <div style="font-weight: 700; color: white; font-size: 12.5px;">${escapeHtml(note.room?.name || 'General Support')}</div>
@@ -4026,11 +4024,11 @@ function renderFlaggedQueue() {
 
     let reasonBadge = '';
     if (isCrisis) {
-      reasonBadge = `<span class="badge-role" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); font-weight: 600; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;"><i class='bx bx-error-alt'></i> AI Crisis Flag</span>`;
+      reasonBadge = `<span class="status-chip red"><span class="dot"></span> AI Crisis Flag</span>`;
     } else if (isUserReport) {
-      reasonBadge = `<span class="badge-role" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-weight: 600; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;"><i class='bx bx-flag'></i> User Reported</span>`;
+      reasonBadge = `<span class="status-chip amber"><span class="dot"></span> User Reported</span>`;
     } else {
-      reasonBadge = `<span class="badge-role" style="background: rgba(122, 91, 147, 0.2); color: #c084fc; border: 1px solid rgba(122, 91, 147, 0.4); font-size: 11px;">Muted / Pending</span>`;
+      reasonBadge = `<span class="status-chip slate"><span class="dot"></span> Muted / Pending</span>`;
     }
 
     const replyContentSafe = escapeHtml(reply.content || '').replace(/'/g, "\\'");
@@ -4039,9 +4037,7 @@ function renderFlaggedQueue() {
     html += `
       <tr>
         <td>
-          <span class="badge-role" style="background: rgba(249, 115, 22, 0.15); color: #fb923c; font-weight: 700; font-size: 11px; padding: 2px 6px; border-radius: 4px;">
-            Reply
-          </span>
+          <span class="status-chip amber">Reply</span>
         </td>
         <td>
           <div style="font-weight: 700; color: white; font-size: 12.5px;">${escapeHtml(reply.note?.room?.name || 'Peer Chat')}</div>
@@ -4308,7 +4304,7 @@ async function fetchAdminCounselors() {
         <td><span class="badge-credentials" style="font-size: 11px; padding: 3px 8px;">${escapeHtml(c.credentials || 'General Wellness')}</span></td>
         <td><span style="font-size: 12px; font-weight: 600; color: hsl(var(--text-secondary));"><i class="bx bx-globe" style="margin-right: 4px;"></i>${escapeHtml(c.user?.timezone || 'UTC')}</span></td>
         <td>
-          <span class="badge-status ${statusClass}">${c.status}</span>
+          <span class="status-chip ${c.status === 'ACTIVE' ? 'green' : 'amber'}"><span class="dot"></span> ${c.status}</span>
         </td>
         <td>
           <strong style="color: white; font-size: 13px;">${c._count?.sessions || 0}</strong>
@@ -4775,13 +4771,13 @@ function renderMasterCalendar() {
 
       let statusBadge = '';
       if (s.status === 'IN_PROGRESS') {
-        statusBadge = `<span class="badge-role" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); font-size: 11px;"><i class='bx bx-broadcast' style="animation: pulse 1.5s infinite;"></i> In Progress</span>`;
+        statusBadge = `<span class="status-chip teal"><span class="dot"></span> In Progress</span>`;
       } else if (s.status === 'COMPLETED') {
-        statusBadge = `<span class="badge-status verified" style="font-size: 11px;"><i class='bx bx-check-circle'></i> Completed</span>`;
+        statusBadge = `<span class="status-chip green"><span class="dot"></span> Completed</span>`;
       } else if (s.status === 'CANCELLED_BY_STUDENT' || s.status === 'CANCELLED_BY_COUNSELOR') {
-        statusBadge = `<span class="badge-role" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); font-size: 11px;"><i class='bx bx-x'></i> Cancelled</span>`;
+        statusBadge = `<span class="status-chip red"><span class="dot"></span> Cancelled</span>`;
       } else {
-        statusBadge = `<span class="badge-role" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 11px;"><i class='bx bx-time'></i> Confirmed</span>`;
+        statusBadge = `<span class="status-chip amber"><span class="dot"></span> Confirmed</span>`;
       }
 
       const card = document.createElement('div');
@@ -4864,7 +4860,7 @@ function renderMasterCalendar() {
           <strong style="color: white; font-size: 13px;">${escapeHtml(studentName)}</strong>
           <div style="font-size: 11px; color: rgba(255,255,255,0.4);">${escapeHtml(studentEmail)}</div>
         </td>
-        <td><span class="badge-role" style="font-size: 11.5px;">${escapeHtml(counselorName)}</span></td>
+        <td><span class="cell-primary">${escapeHtml(counselorName)}</span></td>
         <td><span style="font-size: 12px; color: #cbd5e1;">${formatDateString(s.startTime)} ${new Date(s.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></td>
         <td>${statusBadge}</td>
         <td>
