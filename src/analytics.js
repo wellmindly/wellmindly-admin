@@ -208,7 +208,7 @@ export function saveConsent(decision, categories) {
     categories: {
       strictly_necessary: true,
       analytics: Boolean(categories.analytics),
-      marketing: false,
+      marketing: Boolean(categories.marketing),
     },
   };
 
@@ -234,7 +234,7 @@ export function saveConsent(decision, categories) {
 }
 
 export function acceptAllConsent() {
-  return saveConsent('accepted_all', { analytics: true, marketing: false });
+  return saveConsent('accepted_all', { analytics: true, marketing: true });
 }
 
 export function rejectAllConsent() {
@@ -377,13 +377,13 @@ export function loadGa4(measurementId, debug = false) {
   }
 }
 
-export function updateGa4Consent(granted) {
+export function updateGa4Consent(analyticsGranted, adsGranted = false) {
   if (typeof window === 'undefined' || !window.gtag) return;
   window.gtag('consent', 'update', {
-    analytics_storage: granted ? 'granted' : 'denied',
-    ad_storage: 'denied',
-    ad_user_data: 'denied',
-    ad_personalization: 'denied',
+    analytics_storage: analyticsGranted ? 'granted' : 'denied',
+    ad_storage: adsGranted ? 'granted' : 'denied',
+    ad_user_data: adsGranted ? 'granted' : 'denied',
+    ad_personalization: adsGranted ? 'granted' : 'denied',
   });
 }
 
@@ -393,15 +393,19 @@ export function initAnalytics() {
   setupGaConsentDefaults();
 
   subscribeConsent((record) => {
-    const isGranted = Boolean(record && record.categories.analytics);
-    updateGa4Consent(isGranted);
+    const isAnalytics = Boolean(record && record.categories.analytics);
+    const isMarketing = Boolean(record && record.categories.marketing);
+    updateGa4Consent(isAnalytics, isMarketing);
 
-    if (isGranted && activeConfig.gaMeasurementId) {
+    if (isAnalytics && activeConfig.gaMeasurementId) {
       loadGa4(activeConfig.gaMeasurementId, activeConfig.debug);
     }
   });
 
   if (hasAnalyticsConsent() && activeConfig.gaMeasurementId) {
+    const record = getConsent();
+    const isMarketing = Boolean(record && record.categories.marketing);
+    updateGa4Consent(true, isMarketing);
     loadGa4(activeConfig.gaMeasurementId, activeConfig.debug);
   }
 
