@@ -1,4 +1,9 @@
 // WellMindly Admin Portal - Core Logic (Refined)
+import { initAnalytics, trackPageView, trackEvent, openConsentPreferences } from './analytics.js';
+
+// Initialize privacy-safe admin analytics & consent UI
+initAnalytics();
+window.openConsentPreferences = openConsentPreferences;
 
 // API Configuration
 let rawApiUrl = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://api.wellmindly.com/api' : 'http://localhost:5000/api');
@@ -619,6 +624,8 @@ function handleLogout() {
 // Switch Tab Pane
 function switchTab(tabName) {
   state.activeTab = tabName;
+  trackPageView(`/admin/${tabName}`, `WellMindly Admin | ${tabName}`);
+  trackEvent('admin_tab_switched', { tab_name: tabName });
 
   // Auto-close mobile sidebar drawer upon selecting navigation
   const sidebarAside = document.getElementById('sidebar-aside');
@@ -3024,22 +3031,23 @@ window.deleteSelectedSubscribers = async function() {
 };
 
 window.purgeNewsletterBots = async function() {
-  if (!confirm('This will purge all newsletter/waitlist subscribers from the database. Are you sure you want to proceed?')) {
+  if (!confirm('This will classify all waitlist/newsletter entries, archive fake/bot submissions into quarantine, and preserve all real subscribers. Proceed?')) {
     return;
   }
   try {
-    showToast('Purging bot signups...', 'info');
-    const res = await apiFetch('/contacts/general/newsletter/all', {
-      method: 'DELETE'
+    showToast('Classifying and archiving bot submissions...', 'info');
+    const res = await apiFetch('/contacts/general/newsletter/archive-fake-bots', {
+      method: 'POST'
     });
-    const count = res?.count || 0;
-    showToast(`Successfully purged ${count} bot signups.`, 'success');
+    const archived = res?.archivedCount ?? res?.count ?? 0;
+    const realRetained = res?.retainedRealCount ?? 0;
+    showToast(`Quarantined ${archived} bot submissions. Preserved ${realRetained} real subscribers.`, 'success');
     window.selectedSubscribers.clear();
     updateSelectedSubscribersBar();
     await fetchGeneralContacts();
   } catch (err) {
-    console.error('Purge error:', err);
-    showToast(err.message || 'Failed to purge bot signups', 'error');
+    console.error('Archive error:', err);
+    showToast(err.message || 'Failed to archive bot signups', 'error');
   }
 };
 

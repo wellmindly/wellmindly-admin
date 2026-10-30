@@ -142,6 +142,10 @@
               <p class="profile-email">admin@wellmindly.com</p>
             </div>
           </div>
+          <button id="btn-admin-cookie-prefs" class="btn-cookie-prefs" onclick="window.openConsentPreferences()" title="Cookie & Privacy Preferences" style="background: none; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); border-radius: 8px; padding: 6px 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11px; margin-bottom: 8px; width: 100%;">
+            <i class="bx bx-shield-quarter"></i>
+            <span>Cookie Preferences</span>
+          </button>
           <button id="logout-btn" class="btn-logout" title="Sign Out">
             <i class="bx bx-log-out-circle"></i>
             <span>Sign Out</span>
@@ -932,8 +936,8 @@
                   <option value="ESCALATED">🔴 Escalated / Urgent</option>
                 </select>
                 <button type="button" class="btn-secondary" id="btn-purge-bots" onclick="purgeNewsletterBots()" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171; white-space: nowrap;">
-                  <i class="bx bx-brush"></i>
-                  <span>Purge Fake Signups</span>
+                  <i class="bx bx-shield-quarter"></i>
+                  <span>Archive Bot Signups</span>
                 </button>
                 <button type="button" class="btn-secondary" id="btn-export-contacts" onclick="exportGeneralContactsCSV()" style="white-space: nowrap;">
                   <i class="bx bx-download"></i>
