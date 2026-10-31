@@ -11,6 +11,25 @@ if (rawApiUrl.endsWith('/')) rawApiUrl = rawApiUrl.slice(0, -1);
 if (!rawApiUrl.endsWith('/api')) rawApiUrl += '/api';
 const BASE_URL = rawApiUrl;
 
+export function resolveAvatarUrl(url) {
+  if (!url) return '';
+  if (url.includes('.amazonaws.com/')) {
+    let key = url.split('.amazonaws.com/')[1]?.split('?')[0];
+    if (key?.startsWith('wellmindly-assets/')) {
+      key = key.replace(/^wellmindly-assets\//, '');
+    }
+    if (key) {
+      url = `/api/v1/counselors/assets/${key}`;
+    }
+  }
+  if (url.startsWith('/api/')) {
+    const backendOrigin = BASE_URL.replace(/\/api\/?$/, '');
+    return encodeURI(`${backendOrigin}${url}`);
+  }
+  return encodeURI(url);
+}
+window.resolveAvatarUrl = resolveAvatarUrl;
+
 // Portal State
 const state = {
   token: localStorage.getItem('admin_token') || null,
@@ -4294,7 +4313,7 @@ async function fetchAdminCounselors() {
         <td>
           <div style="display: flex; align-items: center; gap: 10px;">
             ${c.avatarUrl ? `
-              <img src="${escapeHtml(c.avatarUrl)}" alt="${initials}" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+              <img src="${escapeHtml(resolveAvatarUrl(c.avatarUrl))}" alt="${initials}" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
               <div style="display: none; width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, hsl(var(--primary-teal)), #10b981); align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: white; border: 1px solid rgba(255,255,255,0.2);">
                 ${initials}
               </div>
@@ -4509,19 +4528,63 @@ window.approveCounselorApplication = async function(id) {
   }
 };
 
+function compressImage(file, maxDimension = 800, quality = 0.85) {
+  return new Promise((resolve, reject) => {
+    if (file.type === 'image/svg+xml') {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve({ base64Data: e.target.result, mimeType: file.type, fileName: file.name });
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve({ base64Data: e.target.result, mimeType: file.type, fileName: file.name });
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        const mimeType = 'image/jpeg';
+        const base64Data = canvas.toDataURL(mimeType, quality);
+        const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        resolve({ base64Data, mimeType, fileName: `${nameWithoutExt}.jpg` });
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 window.uploadCounselorAvatar = async function(fileInput, targetInputId, previewImgId) {
   const file = fileInput.files?.[0];
   if (!file) return;
 
   showToast('Uploading profile image...', 'info');
 
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const base64Data = e.target.result;
+  try {
+    const compressed = await compressImage(file, 800, 0.85);
     const res = await apiPost('/admin/upload', {
-      fileName: file.name,
-      mimeType: file.type,
-      base64Data,
+      fileName: compressed.fileName,
+      mimeType: compressed.mimeType,
+      base64Data: compressed.base64Data,
       folder: 'avatars'
     });
 
@@ -4533,7 +4596,7 @@ window.uploadCounselorAvatar = async function(fileInput, targetInputId, previewI
       if (previewImgId) {
         const img = document.getElementById(previewImgId);
         if (img) {
-          img.src = res.url;
+          img.src = resolveAvatarUrl(res.url);
           img.classList.remove('hidden');
         }
       }
@@ -4541,8 +4604,10 @@ window.uploadCounselorAvatar = async function(fileInput, targetInputId, previewI
     } else {
       showToast(res?.error?.message || 'Failed to upload image', 'error');
     }
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    console.error('Avatar upload error:', err);
+    showToast('Failed to upload image', 'error');
+  }
 };
 
 // ── MASTER SESSIONS CALENDAR & APPOINTMENT DISPATCHER ────────────────
@@ -4689,7 +4754,7 @@ function renderCounselorAvailabilitySlots() {
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
           <div style="display: flex; align-items: center; gap: 10px;">
             ${c.avatarUrl ? `
-              <img src="${escapeHtml(c.avatarUrl)}" alt="${initials}" style="width: 32px; height: 32px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+              <img src="${escapeHtml(resolveAvatarUrl(c.avatarUrl))}" alt="${initials}" style="width: 32px; height: 32px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
               <div style="display: none; width: 32px; height: 32px; border-radius: 8px; background: ${c.color}; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; color: white;">
                 ${initials}
               </div>
