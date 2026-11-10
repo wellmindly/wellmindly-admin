@@ -1,3 +1,6 @@
+/* Icon font, bundled from npm (pinned in package.json) instead of an unpinned CDN; must stay first. */
+@import "boxicons/css/boxicons.min.css";
+
 /* 
 =========================================
   WELLMINDLY ADMIN DESIGN SYSTEM
@@ -969,7 +972,9 @@ body {
 
 @media (max-width: 1100px) {
   .overview-analytics-grid {
-    grid-template-columns: 1fr;
+    /* minmax(0, …) so Chart.js canvases can shrink with the viewport instead
+       of pinning the column to the width they were first drawn at. */
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -977,6 +982,7 @@ body {
 .analytics-side-col {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .chart-container {
@@ -2724,6 +2730,22 @@ body {
   
   .content-canvas {
     padding: 20px 16px;
+  }
+
+  /* TalkMindly: rooms list stacks above the flagged queue (inline style sets 320px 1fr). */
+  .moderation-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .invite-counselor-form {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  #sentiment-bars-container {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 6px !important;
   }
 }
 

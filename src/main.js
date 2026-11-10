@@ -1,5 +1,9 @@
 // WellMindly Admin Portal - Core Logic (Refined)
+import { Chart, registerables } from 'chart.js';
 import { initAnalytics, trackPageView, trackEvent, openConsentPreferences } from './analytics.js';
+
+// Chart.js is bundled from npm (pinned) rather than loaded unpinned from a CDN.
+Chart.register(...registerables);
 
 // Initialize privacy-safe admin analytics & consent UI
 initAnalytics();
@@ -143,7 +147,7 @@ function showToast(message, type = 'info', duration = 3500) {
     <div class="toast-icon-wrap">
       <i class="bx ${icon}"></i>
     </div>
-    <div class="toast-content">${message}</div>
+    <div class="toast-content"></div>
     <button class="toast-close-btn" title="Dismiss">
       <i class="bx bx-x"></i>
     </button>
@@ -151,6 +155,9 @@ function showToast(message, type = 'info', duration = 3500) {
       <div class="toast-progress-fill" style="animation-duration: ${duration}ms;"></div>
     </div>
   `;
+
+  // Messages can carry API error text or user-entered names, so never parse them as HTML.
+  toast.querySelector('.toast-content').textContent = message;
 
   const closeBtn = toast.querySelector('.toast-close-btn');
   const dismiss = () => {
@@ -563,10 +570,39 @@ function setupEventHandlers() {
 }
 
 
+// Roles the backend accepts on /admin/* and /v1/admin/* routes.
+const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN'];
+
+// UX guard only (the API enforces authorization): read the role and expiry
+// from the stored JWT so a non-admin or expired token never renders the
+// command-center shell with empty data.
+function isUsableAdminToken(token) {
+  try {
+    const segment = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(segment.padEnd(Math.ceil(segment.length / 4) * 4, '=')));
+    if (!ADMIN_ROLES.includes(payload.role)) return false;
+    if (typeof payload.exp === 'number' && payload.exp * 1000 <= Date.now()) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Authentication Check
 function checkAuthentication() {
   const loginContainer = document.getElementById('login-container');
   const appContainer = document.getElementById('app-container');
+
+  if (state.token && !isUsableAdminToken(state.token)) {
+    state.token = null;
+    localStorage.removeItem('admin_token');
+    const loginError = document.getElementById('login-error');
+    const errorMessage = document.getElementById('error-message');
+    if (loginError && errorMessage) {
+      errorMessage.textContent = 'Your session has expired or this account does not have admin access. Please sign in with an administrator account.';
+      loginError.classList.remove('hidden');
+    }
+  }
 
   if (state.token) {
     loginContainer.classList.add('hidden');
@@ -606,7 +642,10 @@ async function handleLogin(e) {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || 'Login failed. Please verify admin credentials.');
+      throw new Error(data.error?.message || data.error || 'Login failed. Please verify admin credentials.');
+    }
+    if (!data.token || !isUsableAdminToken(data.token)) {
+      throw new Error('This account does not have admin access.');
     }
 
     state.token = data.token;
@@ -740,10 +779,14 @@ function switchTab(tabName) {
 window.switchTab = switchTab;
 
 
-// Fetch helper
-async function apiFetch(endpoint, options = {}) {
+// Fetch helpers
+// apiRequest throws on any failure (network, non-2xx, expired session) with the
+// server's error message, so mutating actions can report what really happened.
+// apiFetch keeps the historical "null on failure" contract used by read paths.
+async function apiRequest(endpoint, options = {}) {
+  let response;
   try {
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    response = await fetch(`${BASE_URL}${endpoint}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
@@ -751,23 +794,44 @@ async function apiFetch(endpoint, options = {}) {
         ...(options.headers || {})
       }
     });
+  } catch {
+    // fetch() only rejects on network failure; its "Failed to fetch" text means nothing to an admin.
+    throw new Error('Cannot reach the WellMindly API. Check your connection and try again.');
+  }
 
-    if (response.status === 401 && !endpoint.includes('/v1/admin')) {
-      state.token = null;
-      localStorage.removeItem('admin_token');
-      checkAuthentication();
-      return null;
-    }
+  if (response.status === 401 && !endpoint.includes('/v1/admin')) {
+    state.token = null;
+    localStorage.removeItem('admin_token');
+    checkAuthentication();
+    throw new Error('Your admin session has expired. Please sign in again.');
+  }
 
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data.error?.message || data.error || `HTTP error! Status: ${response.status}`);
-    }
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error?.message || data.error || data.message || `HTTP error! Status: ${response.status}`);
+  }
 
-    return await response.json();
+  return await response.json();
+}
+
+async function apiFetch(endpoint, options = {}) {
+  try {
+    return await apiRequest(endpoint, options);
   } catch (error) {
     console.error(`API Fetch failed for ${endpoint}:`, error);
     return null;
+  }
+}
+
+// For actions whose callers branch on `res.success`: never throws, and on
+// failure resolves to { success: false, error: { message } } carrying the
+// server's reason (e.g. "email already registered") instead of null.
+async function apiAction(endpoint, method, body) {
+  try {
+    return await apiRequest(endpoint, { method, body: body === undefined ? undefined : JSON.stringify(body) });
+  } catch (err) {
+    console.error(`API ${method} failed for ${endpoint}:`, err);
+    return { success: false, error: { message: err.message } };
   }
 }
 
@@ -825,7 +889,12 @@ function renderOverview() {
 
   const totalStudentsVal = state.students.length;
   const totalSubmissionsVal = state.metrics.totalSubmissions || 0;
-  const totalCounselorsVal = (state.counselors && state.counselors.length) || (state.counselorContacts ? state.counselorContacts.length : 0);
+  // "Active Counselors" KPI: only provisioned counselors whose status is ACTIVE.
+  // Applications (counselorContacts) and UNDER_REVIEW/SUSPENDED profiles are
+  // not part of the clinical team and must not inflate this number.
+  const totalCounselorsVal = Array.isArray(state.counselors)
+    ? state.counselors.filter(c => (c.status || 'ACTIVE') === 'ACTIVE').length
+    : 0;
 
   // Process critical alerts count:
   // Count quiz results where classification includes "Severe" or "Distress"
@@ -1376,7 +1445,7 @@ function renderStudentsTable() {
     row.innerHTML = `
       <td>
         <div class="student-profile-header">
-          <div class="profile-avatar">${initials}</div>
+          <div class="profile-avatar">${escapeHtml(initials)}</div>
           <div>
             <strong style="color: white; display: block; font-size: 13px;">${escapeHtml(fullName)}</strong>
           </div>
@@ -2121,13 +2190,16 @@ function renderFeedbackList() {
     const highlightClass = isCritical ? 'style="border-left: 3px solid #ef4444; background: rgba(239, 68, 68, 0.03);"' : '';
 
     // Show short excerpt of Q1 (first feelings)
-    const shortQ1 = survey.q1.length > 55 ? survey.q1.substring(0, 52) + '...' : survey.q1 || '<em style="color: rgba(255,255,255,0.3);">No commentary written</em>';
+    // Survey answers are free text typed by students: escape before injecting.
+    const shortQ1 = survey.q1
+      ? escapeHtml(survey.q1.length > 55 ? survey.q1.substring(0, 52) + '...' : survey.q1)
+      : '<em style="color: rgba(255,255,255,0.3);">No commentary written</em>';
 
     row.innerHTML = `
       <td ${highlightClass}>
         <div style="display: flex; align-items: center; gap: 10px;">
           <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, hsl(var(--primary-plum)), hsl(var(--primary-teal))); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; color: white; border: 1px solid rgba(255,255,255,0.2);">
-            ${initials}
+            ${escapeHtml(initials)}
           </div>
           <div>
             <div style="font-weight: 700; color: white; font-size: 13px;">${escapeHtml(studentName)}</div>
@@ -2161,6 +2233,13 @@ function renderFeedbackList() {
     pagState.feedbacks.page = page;
     renderFeedbackList();
   });
+}
+
+// Refresh feedback rows when the Feedback tab is opened (switchTab calls this).
+async function fetchFeedbacks() {
+  const data = await apiFetch('/admin/feedbacks');
+  if (data) state.feedbacks = data.feedbacks || [];
+  renderFeedbackList();
 }
 
 // Parse comments serialized block
@@ -2231,7 +2310,7 @@ function openSurveyModal(feedbackId) {
       block.className = 'survey-question-block';
       block.innerHTML = `
         <div class="survey-q-title">${item.text}</div>
-        <div class="survey-q-ans">${ans}</div>
+        <div class="survey-q-ans">${escapeHtml(ans)}</div>
       `;
       container.appendChild(block);
     }
@@ -2354,12 +2433,12 @@ async function renderQuizSubmissionsTable() {
 
     row.innerHTML = `
       <td>
-        <div style="font-weight: 700; color: white">${studentName}</div>
-        <div style="font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px">${studentEmail}</div>
+        <div style="font-weight: 700; color: white">${escapeHtml(studentName)}</div>
+        <div style="font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px">${escapeHtml(studentEmail)}</div>
       </td>
       <td><span class="text-secondary">${date}</span></td>
-      <td><strong>${res.overallScore} / ${activeQuiz.maxScore}</strong></td>
-      <td><span ${colorStyle} style="font-weight: 600">${classification}</span></td>
+      <td><strong>${escapeHtml(res.overallScore)} / ${escapeHtml(activeQuiz.maxScore)}</strong></td>
+      <td><span ${colorStyle} style="font-weight: 600">${escapeHtml(classification)}</span></td>
       <td class="text-right">
         <!-- Re-use assessment details modal (passing full details since it parses correctly) -->
         <button class="btn-view-details" onclick="openAssessmentSheetDirect('${res.id}', '${quizId}')">
@@ -2494,7 +2573,7 @@ async function openAssessmentSheet(resultId) {
       aiFeedback.insights.forEach(ins => {
         const item = document.createElement('div');
         item.className = 'ai-insight-bullet';
-        item.innerHTML = `<i class="bx bx-right-arrow-alt"></i> <span>${ins}</span>`;
+        item.innerHTML = `<i class="bx bx-right-arrow-alt"></i> <span>${escapeHtml(ins)}</span>`;
         insightsEl.appendChild(item);
       });
     }
@@ -2556,10 +2635,10 @@ async function openAssessmentSheet(resultId) {
       }
 
       row.innerHTML = `
-        <td style="font-weight:700;">${q.index}</td>
-        <td><strong style="color:white; font-size:12.5px;">${q.text}</strong></td>
-        <td><span style="color:hsl(185, 55%, 50%); font-weight:600;"><i class="bx bx-check-double"></i> ${selectedOption}</span></td>
-        <td class="text-right"><span class="ans-score-pill">+${pointsAwarded} pts</span></td>
+        <td style="font-weight:700;">${escapeHtml(q.index)}</td>
+        <td><strong style="color:white; font-size:12.5px;">${escapeHtml(q.text)}</strong></td>
+        <td><span style="color:hsl(185, 55%, 50%); font-weight:600;"><i class="bx bx-check-double"></i> ${escapeHtml(selectedOption)}</span></td>
+        <td class="text-right"><span class="ans-score-pill">+${escapeHtml(pointsAwarded)} pts</span></td>
       `;
       answersTableBody.appendChild(row);
     });
@@ -2578,8 +2657,8 @@ async function openAssessmentSheet(resultId) {
           <tr>
             <td style="font-weight:700;">${idx + 1}</td>
             <td><strong style="color:white; font-size:12.5px;">Character Strength / Dimension</strong></td>
-            <td><span ${textStyle}>${starIcon}${dimension}</span></td>
-            <td class="text-right"><span class="ans-score-pill">${val} pts</span></td>
+            <td><span ${textStyle}>${starIcon}${escapeHtml(dimension)}</span></td>
+            <td class="text-right"><span class="ans-score-pill">${escapeHtml(val)} pts</span></td>
           </tr>
         `;
       });
@@ -2593,7 +2672,7 @@ async function openAssessmentSheet(resultId) {
             <td style="font-weight:700;">${idx + 1}</td>
             <td><strong style="color:white; font-size:12.5px;">Response Score</strong></td>
             <td><span>Option Rating</span></td>
-            <td class="text-right"><span class="ans-score-pill">+${respVal} pts</span></td>
+            <td class="text-right"><span class="ans-score-pill">+${escapeHtml(respVal)} pts</span></td>
           </tr>
         `;
       });
@@ -2606,8 +2685,8 @@ async function openAssessmentSheet(resultId) {
           <tr>
             <td style="font-weight:700;">${idx + 1}</td>
             <td><strong style="color:white; font-size:12.5px;">Question Response</strong></td>
-            <td><span>Option: ${val}</span></td>
-            <td class="text-right"><span class="ans-score-pill">${val} pts</span></td>
+            <td><span>Option: ${escapeHtml(val)}</span></td>
+            <td class="text-right"><span class="ans-score-pill">${escapeHtml(val)} pts</span></td>
           </tr>
         `;
       });
@@ -2622,9 +2701,9 @@ async function openAssessmentSheet(resultId) {
         rowsHtml += `
           <tr>
             <td style="font-weight:700;">${idx++}</td>
-            <td><strong style="color:white; font-size:12.5px;">${key}</strong></td>
-            <td><span>${displayVal}</span></td>
-            <td class="text-right"><span class="ans-score-pill">${val}</span></td>
+            <td><strong style="color:white; font-size:12.5px;">${escapeHtml(key)}</strong></td>
+            <td><span>${escapeHtml(displayVal)}</span></td>
+            <td class="text-right"><span class="ans-score-pill">${escapeHtml(displayVal)}</span></td>
           </tr>
         `;
       });
@@ -2636,7 +2715,7 @@ async function openAssessmentSheet(resultId) {
       answersTableBody.innerHTML = `
         <tr>
           <td colspan="4" style="font-family: monospace; white-space: pre-wrap; font-size:11px; background-color: hsl(var(--bg-dark) / 0.8)">
-  ${JSON.stringify(answers, null, 2)}
+  ${escapeHtml(JSON.stringify(answers, null, 2))}
           </td>
         </tr>
       `;
@@ -2732,7 +2811,7 @@ function renderUniversityContacts(totalCount = state.universityContacts.length) 
       <td>
         <div style="display: flex; align-items: center; gap: 10px;">
           <div style="width: 34px; height: 34px; border-radius: 8px; background: linear-gradient(135deg, hsl(var(--primary-teal)), #2563eb); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: white; border: 1px solid rgba(255,255,255,0.2);">
-            ${initials}
+            ${escapeHtml(initials)}
           </div>
           <div>
             <strong style="color: white; font-size: 13px;">${escapeHtml(item.universityName)}</strong>
@@ -2845,11 +2924,11 @@ function renderCounselorContacts(totalCount = state.counselorContacts.length) {
       <td>
         <div style="display: flex; align-items: center; gap: 10px;">
           <div style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, hsl(var(--primary-plum)), #3b82f6); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: white; border: 1px solid rgba(255,255,255,0.2);">
-            ${initials}
+            ${escapeHtml(initials)}
           </div>
           <div>
             <strong style="color: white; font-size: 13px;">${escapeHtml(item.name)}</strong>
-            <div style="font-size: 11px; color: rgba(255,255,255,0.4);">${item.phone || 'Phone pending'}</div>
+            <div style="font-size: 11px; color: rgba(255,255,255,0.4);">${escapeHtml(item.phone || 'Phone pending')}</div>
           </div>
         </div>
       </td>
@@ -3031,11 +3110,11 @@ function updateSelectedSubscribersBar() {
 window.deleteSelectedSubscribers = async function() {
   const ids = Array.from(window.selectedSubscribers);
   if (ids.length === 0) return;
-  if (!confirm(`Are you sure you want to delete ${ids.length} selected subscriber${ids.length > 1 ? 's' : ''}?`)) return;
+  if (!confirm(`Permanently delete ${ids.length} selected subscriber${ids.length > 1 ? 's' : ''}? This cannot be undone.`)) return;
 
   try {
     showToast('Deleting selected subscribers...', 'info');
-    await apiFetch('/contacts/general/batch-delete', {
+    await apiRequest('/contacts/general/batch-delete', {
       method: 'POST',
       body: JSON.stringify({ ids })
     });
@@ -3055,7 +3134,7 @@ window.purgeNewsletterBots = async function() {
   }
   try {
     showToast('Classifying and archiving bot submissions...', 'info');
-    const res = await apiFetch('/contacts/general/newsletter/archive-fake-bots', {
+    const res = await apiRequest('/contacts/general/newsletter/archive-fake-bots', {
       method: 'POST'
     });
     const archived = res?.archivedCount ?? res?.count ?? 0;
@@ -3193,7 +3272,7 @@ function renderGeneralContacts(totalCount = state.generalContacts.length) {
         <td>
           <div style="display: flex; align-items: center; gap: 10px;">
             <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, hsl(var(--primary-teal)), #3b82f6); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; color: white; border: 1px solid rgba(255,255,255,0.2);">
-              ${initials}
+              ${escapeHtml(initials)}
             </div>
             <div>
               <strong class="cell-primary">${escapeHtml(item.name)}</strong>
@@ -3763,8 +3842,8 @@ function renderDualFeedback() {
     } else {
       if (emptyStudent) emptyStudent.classList.add('hidden');
       filteredStudent.forEach(item => {
-        const studentName = item.session?.student ? `${item.session.student.firstName} ${item.session.student.lastName}` : 'Alex Mercer';
-        const counselorName = item.counselor?.user ? `Dr. ${item.counselor.user.firstName} ${item.counselor.user.lastName}` : 'Dr. Sarah Jenkins';
+        const studentName = item.session?.student ? `${item.session.student.firstName} ${item.session.student.lastName}` : 'Student';
+        const counselorName = item.counselor?.user ? `Dr. ${item.counselor.user.firstName} ${item.counselor.user.lastName}` : 'Counselor';
         
         let stars = '';
         for (let i = 1; i <= 5; i++) {
@@ -3806,8 +3885,8 @@ function renderDualFeedback() {
     } else {
       if (emptyCounselor) emptyCounselor.classList.add('hidden');
       filteredCounselor.forEach(item => {
-        const studentName = item.session?.student ? `${item.session.student.firstName} ${item.session.student.lastName}` : 'Alex Mercer';
-        const counselorName = item.counselor?.user ? `Dr. ${item.counselor.user.firstName} ${item.counselor.user.lastName}` : 'Dr. Sarah Jenkins';
+        const studentName = item.session?.student ? `${item.session.student.firstName} ${item.session.student.lastName}` : 'Student';
+        const counselorName = item.counselor?.user ? `Dr. ${item.counselor.user.firstName} ${item.counselor.user.lastName}` : 'Counselor';
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -3994,8 +4073,13 @@ function renderFlaggedQueue() {
       reasonBadge = `<span class="status-chip slate"><span class="dot"></span> Muted / Pending</span>`;
     }
 
-    const noteContentSafe = escapeHtml(note.content || '').replace(/'/g, "\\'");
-    const nickSafe = escapeHtml(note.nickname || 'Anonymous Peer').replace(/'/g, "\\'");
+    // Passed as JS string arguments inside onclick="...". Escaping HTML first
+    // and then backslashing ' did not work: escapeHtml turns ' into &#039;,
+    // which the HTML parser decodes back to ' before the JS runs, so a student's
+    // note could break out of the string. JSON.stringify yields a valid JS
+    // string literal; escapeHtml then makes it safe inside the attribute.
+    const noteContentSafe = escapeHtml(JSON.stringify(note.content || ''));
+    const nickSafe = escapeHtml(JSON.stringify(note.nickname || 'Anonymous Peer'));
 
     html += `
       <tr>
@@ -4010,7 +4094,7 @@ function renderFlaggedQueue() {
           <span style="font-size: 12px; font-weight: 600; color: #a78bfa;">${escapeHtml(note.nickname || 'Peer')}</span>
         </td>
         <td>
-          <div style="font-size: 12px; color: #f1f5f9; max-width: 280px; white-space: normal; word-break: break-word; background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 6px; border-left: 3px solid #ef4444; line-height: 1.4;">
+          <div style="font-size: 12px; color: #f1f5f9; min-width: 200px; max-width: 280px; white-space: normal; word-break: break-word; background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 6px; border-left: 3px solid #ef4444; line-height: 1.4;">
             "${escapeHtml(note.content)}"
           </div>
         </td>
@@ -4023,18 +4107,18 @@ function renderFlaggedQueue() {
         <td class="text-right">
           <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-end;">
             <div style="display: flex; gap: 4px;">
-              <button onclick="resolveModeration('note', '${note.id}', 'approve', '${noteContentSafe}')" class="btn-primary small" style="background: #10b981; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10.5px; cursor: pointer;" title="Keep visible and clear flag">
+              <button onclick="resolveModeration('note', '${note.id}', 'approve', ${noteContentSafe})" class="btn-primary small" style="background: #10b981; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10.5px; cursor: pointer;" title="Keep visible and clear flag">
                 <i class="bx bx-check"></i> Approve
               </button>
-              <button onclick="resolveModeration('note', '${note.id}', 'reject', '${noteContentSafe}')" class="btn-secondary small" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; padding: 4px 8px; border-radius: 4px; font-size: 10.5px; cursor: pointer;" title="Mute and hide from peer rooms">
+              <button onclick="resolveModeration('note', '${note.id}', 'reject', ${noteContentSafe})" class="btn-secondary small" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; padding: 4px 8px; border-radius: 4px; font-size: 10.5px; cursor: pointer;" title="Mute and hide from peer rooms">
                 <i class="bx bx-x"></i> Reject
               </button>
             </div>
             <div style="display: flex; gap: 4px;">
-              <button onclick="escalateModeration('note', '${note.id}', 'counselor', '${noteContentSafe}', '${nickSafe}')" class="btn-secondary small" style="background: rgba(122, 91, 147, 0.2); border: 1px solid rgba(122, 91, 147, 0.4); color: #c084fc; padding: 3px 6px; border-radius: 4px; font-size: 10px; cursor: pointer;" title="Refer peer to Counselor team">
+              <button onclick="escalateModeration('note', '${note.id}', 'counselor', ${noteContentSafe}, ${nickSafe})" class="btn-secondary small" style="background: rgba(122, 91, 147, 0.2); border: 1px solid rgba(122, 91, 147, 0.4); color: #c084fc; padding: 3px 6px; border-radius: 4px; font-size: 10px; cursor: pointer;" title="Mark for counselor follow-up (local log only)">
                 <i class="bx bx-user-voice"></i> Counselor
               </button>
-              <button onclick="escalateModeration('note', '${note.id}', 'crisis', '${noteContentSafe}', '${nickSafe}')" class="btn-secondary small" style="background: rgba(220, 38, 38, 0.25); border: 1px solid rgba(220, 38, 38, 0.6); color: #fca5a5; padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; cursor: pointer;" title="Activate Emergency Crisis Protocol">
+              <button onclick="escalateModeration('note', '${note.id}', 'crisis', ${noteContentSafe}, ${nickSafe})" class="btn-secondary small" style="background: rgba(220, 38, 38, 0.25); border: 1px solid rgba(220, 38, 38, 0.6); color: #fca5a5; padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; cursor: pointer;" title="Record a crisis escalation (local log only, does not alert anyone)">
                 <i class="bx bx-shield-quarter"></i> Crisis
               </button>
             </div>
@@ -4058,8 +4142,9 @@ function renderFlaggedQueue() {
       reasonBadge = `<span class="status-chip slate"><span class="dot"></span> Muted / Pending</span>`;
     }
 
-    const replyContentSafe = escapeHtml(reply.content || '').replace(/'/g, "\\'");
-    const replyNickSafe = escapeHtml(reply.nickname || 'Anonymous Peer').replace(/'/g, "\\'");
+    // See noteContentSafe above: JS string literal first, then HTML-escape.
+    const replyContentSafe = escapeHtml(JSON.stringify(reply.content || ''));
+    const replyNickSafe = escapeHtml(JSON.stringify(reply.nickname || 'Anonymous Peer'));
 
     html += `
       <tr>
@@ -4076,7 +4161,7 @@ function renderFlaggedQueue() {
           <span style="font-size: 12px; font-weight: 600; color: #a78bfa;">${escapeHtml(reply.nickname || 'Peer')}</span>
         </td>
         <td>
-          <div style="font-size: 12px; color: #f1f5f9; max-width: 280px; white-space: normal; word-break: break-word; background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 6px; border-left: 3px solid #fb923c; line-height: 1.4;">
+          <div style="font-size: 12px; color: #f1f5f9; min-width: 200px; max-width: 280px; white-space: normal; word-break: break-word; background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 6px; border-left: 3px solid #fb923c; line-height: 1.4;">
             "${escapeHtml(reply.content)}"
           </div>
         </td>
@@ -4089,18 +4174,18 @@ function renderFlaggedQueue() {
         <td class="text-right">
           <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-end;">
             <div style="display: flex; gap: 4px;">
-              <button onclick="resolveModeration('reply', '${reply.id}', 'approve', '${replyContentSafe}')" class="btn-primary small" style="background: #10b981; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10.5px; cursor: pointer;" title="Keep visible and clear flag">
+              <button onclick="resolveModeration('reply', '${reply.id}', 'approve', ${replyContentSafe})" class="btn-primary small" style="background: #10b981; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10.5px; cursor: pointer;" title="Keep visible and clear flag">
                 <i class="bx bx-check"></i> Approve
               </button>
-              <button onclick="resolveModeration('reply', '${reply.id}', 'reject', '${replyContentSafe}')" class="btn-secondary small" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; padding: 4px 8px; border-radius: 4px; font-size: 10.5px; cursor: pointer;" title="Mute and hide from peer rooms">
+              <button onclick="resolveModeration('reply', '${reply.id}', 'reject', ${replyContentSafe})" class="btn-secondary small" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; padding: 4px 8px; border-radius: 4px; font-size: 10.5px; cursor: pointer;" title="Mute and hide from peer rooms">
                 <i class="bx bx-x"></i> Reject
               </button>
             </div>
             <div style="display: flex; gap: 4px;">
-              <button onclick="escalateModeration('reply', '${reply.id}', 'counselor', '${replyContentSafe}', '${replyNickSafe}')" class="btn-secondary small" style="background: rgba(122, 91, 147, 0.2); border: 1px solid rgba(122, 91, 147, 0.4); color: #c084fc; padding: 3px 6px; border-radius: 4px; font-size: 10px; cursor: pointer;" title="Refer peer to Counselor team">
+              <button onclick="escalateModeration('reply', '${reply.id}', 'counselor', ${replyContentSafe}, ${replyNickSafe})" class="btn-secondary small" style="background: rgba(122, 91, 147, 0.2); border: 1px solid rgba(122, 91, 147, 0.4); color: #c084fc; padding: 3px 6px; border-radius: 4px; font-size: 10px; cursor: pointer;" title="Mark for counselor follow-up (local log only)">
                 <i class="bx bx-user-voice"></i> Counselor
               </button>
-              <button onclick="escalateModeration('reply', '${reply.id}', 'crisis', '${replyContentSafe}', '${replyNickSafe}')" class="btn-secondary small" style="background: rgba(220, 38, 38, 0.25); border: 1px solid rgba(220, 38, 38, 0.6); color: #fca5a5; padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; cursor: pointer;" title="Activate Emergency Crisis Protocol">
+              <button onclick="escalateModeration('reply', '${reply.id}', 'crisis', ${replyContentSafe}, ${replyNickSafe})" class="btn-secondary small" style="background: rgba(220, 38, 38, 0.25); border: 1px solid rgba(220, 38, 38, 0.6); color: #fca5a5; padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; cursor: pointer;" title="Record a crisis escalation (local log only, does not alert anyone)">
                 <i class="bx bx-shield-quarter"></i> Crisis
               </button>
             </div>
@@ -4151,7 +4236,7 @@ window.escalateModeration = function(type, itemId, level, contentExcerpt = '', a
       itemType: type.toUpperCase(),
       contentExcerpt: (contentExcerpt || 'Flagged message').slice(0, 80) + '...',
       action: 'Counselor Referral Assigned',
-      note: `Escalated for professional counselor outreach to peer "${authorNick || 'Anonymous'}".`,
+      note: `Marked for counselor follow-up for peer "${authorNick || 'Anonymous'}" (local record only; no one was notified).`,
       resolvedAt: new Date().toISOString()
     };
 
@@ -4159,9 +4244,11 @@ window.escalateModeration = function(type, itemId, level, contentExcerpt = '', a
     localStorage.setItem('wellmindly_moderation_audit_log', JSON.stringify(state.moderationAuditLog));
     renderModerationAuditLog();
 
-    showToast(`Referral Logged: Clinical team notified for peer "${authorNick}".`, 'info');
+    // There is no backend escalation endpoint: this only writes the local audit
+    // log. Say so, rather than implying the clinical team was alerted.
+    showToast(`Marked for counselor follow-up (saved in this browser only). No one has been notified automatically: contact the counselor team directly about "${authorNick}".`, 'warning', 8000);
   } else if (level === 'crisis') {
-    const isConfirmed = confirm(`🚨 EMERGENCY CRISIS PROTOCOL:\n\nTrigger crisis outreach protocol for peer "${authorNick}"?\n\nThis will log an emergency intervention record and dispatch immediate priority wellness response alerts.`);
+    const isConfirmed = confirm(`🚨 CRISIS ESCALATION for peer "${authorNick}"\n\nThis records the escalation in this browser's moderation log only. It does NOT alert anyone or dispatch emergency resources.\n\nAfter confirming, follow the crisis escalation procedure in the Policy Guide and contact the on-call counselor / emergency services yourself.`);
     if (!isConfirmed) return;
 
     const auditEntry = {
@@ -4169,7 +4256,7 @@ window.escalateModeration = function(type, itemId, level, contentExcerpt = '', a
       itemType: type.toUpperCase(),
       contentExcerpt: (contentExcerpt || 'Distress message').slice(0, 80) + '...',
       action: 'EMERGENCY CRISIS ESCALATION',
-      note: `Emergency crisis protocol activated for peer "${authorNick}". Emergency resources dispatched.`,
+      note: `Crisis escalation recorded for peer "${authorNick}" (local record only; manual follow-up required).`,
       resolvedAt: new Date().toISOString()
     };
 
@@ -4177,7 +4264,7 @@ window.escalateModeration = function(type, itemId, level, contentExcerpt = '', a
     localStorage.setItem('wellmindly_moderation_audit_log', JSON.stringify(state.moderationAuditLog));
     renderModerationAuditLog();
 
-    showToast(`CRISIS PROTOCOL ACTIVE: Emergency notification logged for "${authorNick}".`, 'error');
+    showToast(`Crisis escalation recorded locally for "${authorNick}". No alert was sent: follow the crisis escalation procedure now.`, 'error', 10000);
   }
 };
 
@@ -4241,7 +4328,7 @@ async function createTalkRoom() {
   }
 
   try {
-    const res = await apiPost('/talk/rooms', { name, description });
+    const res = await apiAction('/talk/rooms', 'POST', { name, description });
     if (res && (res.success || res.room)) {
       showToast(`TalkRoom "${name}" created successfully!`, 'success');
       if (nameInput) nameInput.value = '';
@@ -4249,7 +4336,7 @@ async function createTalkRoom() {
       if (formContainer) formContainer.classList.add('hidden');
       fetchTalkModerationData();
     } else {
-      showToast(res.error || 'Failed to create TalkRoom.', 'error');
+      showToast(res?.error?.message || 'Failed to create TalkRoom.', 'error');
     }
   } catch (err) {
     console.error('Create room error:', err);
@@ -4261,12 +4348,12 @@ async function createTalkRoom() {
 window.deleteTalkRoom = async function(roomId) {
   if (confirm('Are you sure you want to permanently delete this TalkRoom? All associated messages will be removed.')) {
     try {
-      const res = await apiDelete(`/talk/rooms/${roomId}`);
+      const res = await apiAction(`/talk/rooms/${roomId}`, 'DELETE');
       if (res && res.success) {
         showToast('TalkRoom deleted.', 'info');
         fetchTalkModerationData();
       } else {
-        showToast(res.error || 'Failed to delete TalkRoom.', 'error');
+        showToast(res?.error?.message || 'Failed to delete TalkRoom.', 'error');
       }
     } catch (err) {
       console.error('Delete room error:', err);
@@ -4276,8 +4363,8 @@ window.deleteTalkRoom = async function(roomId) {
 };
 
 function escapeHtml(str) {
-  if (!str) return '';
-  return str
+  if (str === null || str === undefined) return '';
+  return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -4294,7 +4381,8 @@ async function fetchAdminCounselors() {
   if (!res || !res.success) return;
 
   const counselors = res.data || [];
-  
+  state.counselors = counselors;
+
   // Update active staff KPI count
   const kpiActive = document.getElementById('kpi-counselor-apps-active');
   if (kpiActive) kpiActive.textContent = counselors.filter(c => c.status === 'ACTIVE').length;
@@ -4313,13 +4401,13 @@ async function fetchAdminCounselors() {
         <td>
           <div style="display: flex; align-items: center; gap: 10px;">
             ${c.avatarUrl ? `
-              <img src="${escapeHtml(resolveAvatarUrl(c.avatarUrl))}" alt="${initials}" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+              <img src="${escapeHtml(resolveAvatarUrl(c.avatarUrl))}" alt="${escapeHtml(initials)}" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
               <div style="display: none; width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, hsl(var(--primary-teal)), #10b981); align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: white; border: 1px solid rgba(255,255,255,0.2);">
-                ${initials}
+                ${escapeHtml(initials)}
               </div>
             ` : `
               <div style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, hsl(var(--primary-teal)), #10b981); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: white; border: 1px solid rgba(255,255,255,0.2);">
-                ${initials}
+                ${escapeHtml(initials)}
               </div>
             `}
             <div>
@@ -4340,7 +4428,7 @@ async function fetchAdminCounselors() {
         <td class="text-right">
           <button class="btn-secondary small" onclick="toggleCounselorStatus('${c.id}', '${c.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE'}')" style="padding: 6px 10px; font-size: 11px;">
             <i class="bx ${c.status === 'ACTIVE' ? 'bx-block' : 'bx-check-circle'}"></i>
-            <span>${c.status === 'ACTIVE' ? 'Suspend' : 'Activate'}</span>
+            <span>${c.status === 'ACTIVE' ? 'Suspend' : (c.status === 'UNDER_REVIEW' ? 'Approve' : 'Activate')}</span>
           </button>
         </td>
       </tr>
@@ -4349,10 +4437,26 @@ async function fetchAdminCounselors() {
 }
 
 window.toggleCounselorStatus = async function(id, newStatus) {
-  const res = await apiPut(`/v1/admin/counselors/${id}/status`, { status: newStatus });
-  if (res && res.success) {
+  // Activating makes a counselor bookable by students; suspending hides them.
+  // Both are consequential, so confirm with the counselor's name first.
+  const counselor = (state.counselors || []).find(c => c.id === id);
+  const name = counselor ? formatCounselorDisplayName(counselor.user, counselor.credentials) : 'this counselor';
+  const question = newStatus === 'ACTIVE'
+    ? `${counselor?.status === 'UNDER_REVIEW' ? 'Approve' : 'Activate'} ${name}? They will become visible and bookable by students. Make sure their credentials have been verified.`
+    : `Suspend ${name}? They will no longer be bookable by students.`;
+  if (!confirm(question)) return;
+
+  try {
+    const res = await apiRequest(`/v1/admin/counselors/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status: newStatus })
+    });
+    if (!res || !res.success) throw new Error('Failed to update counselor status.');
     showToast(`Counselor status updated to ${newStatus}.`, 'success');
     fetchAdminCounselors();
+  } catch (err) {
+    console.error('Counselor status update failed:', err);
+    showToast(err.message || 'Failed to update counselor status.', 'error');
   }
 };
 
@@ -4377,7 +4481,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const email = document.getElementById('invite-email').value;
 
       showToast('Sending counselor invitation email...', 'info');
-      const res = await apiPost('/v1/admin/counselors/invite', { firstName, lastName, email });
+      const res = await apiAction('/v1/admin/counselors/invite', 'POST', { firstName, lastName, email });
       if (res && res.success) {
         let setupUrl = res.data?.setupUrl || '';
         if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && setupUrl.includes('localhost')) {
@@ -4478,7 +4582,7 @@ function closeCustomAlertModal() {
 window.requestCounselorDocs = async function(id) {
   const item = state.counselorContacts.find(c => c.id === id);
   showToast('Sending document request email...', 'info');
-  const res = await apiPost(`/contacts/counselor/${id}/request-docs`, {});
+  const res = await apiAction(`/contacts/counselor/${id}/request-docs`, 'POST', {});
   if (res && res.success) {
     state.counselorStages[id] = 'DOCS_REQUESTED';
     localStorage.setItem('wellmindly_counselor_stages', JSON.stringify(state.counselorStages));
@@ -4501,8 +4605,11 @@ window.requestCounselorDocs = async function(id) {
 
 window.approveCounselorApplication = async function(id) {
   const item = state.counselorContacts.find(c => c.id === id);
+  // Approving creates a counselor account and emails a registration link, so
+  // it must not fire from a single stray click in the applications table.
+  if (!confirm(`Approve ${item?.name || 'this applicant'}${item?.email ? ` (${item.email})` : ''} and email them a counselor registration link?`)) return;
   showToast('Approving counselor application...', 'info');
-  const res = await apiPost(`/contacts/counselor/${id}/approve-onboard`, {});
+  const res = await apiAction(`/contacts/counselor/${id}/approve-onboard`, 'POST', {});
   if (res && res.success) {
     state.counselorStages[id] = 'INVITE_SENT';
     localStorage.setItem('wellmindly_counselor_stages', JSON.stringify(state.counselorStages));
@@ -4754,13 +4861,13 @@ function renderCounselorAvailabilitySlots() {
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
           <div style="display: flex; align-items: center; gap: 10px;">
             ${c.avatarUrl ? `
-              <img src="${escapeHtml(resolveAvatarUrl(c.avatarUrl))}" alt="${initials}" style="width: 32px; height: 32px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+              <img src="${escapeHtml(resolveAvatarUrl(c.avatarUrl))}" alt="${escapeHtml(initials)}" style="width: 32px; height: 32px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
               <div style="display: none; width: 32px; height: 32px; border-radius: 8px; background: ${c.color}; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; color: white;">
-                ${initials}
+                ${escapeHtml(initials)}
               </div>
             ` : `
               <div style="width: 32px; height: 32px; border-radius: 8px; background: ${c.color}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; color: white;">
-                ${initials}
+                ${escapeHtml(initials)}
               </div>
             `}
             <div>
@@ -5107,12 +5214,16 @@ window.cancelSessionAdmin = async function(sessionId) {
   if (reason === null) return; // Cancelled prompt
 
   try {
-    await apiFetch(`/v1/admin/sessions/${sessionId}/cancel`, {
+    await apiRequest(`/v1/admin/sessions/${sessionId}/cancel`, {
       method: 'PUT',
       body: JSON.stringify({ reason: reason || 'Cancelled by Clinical Administrator' })
     });
   } catch (err) {
-    console.warn('API error cancelling session, applying client update:', err);
+    // Never fake a cancellation locally: the student and counselor would still
+    // see the session as booked.
+    console.error('Cancel session failed:', err);
+    showToast(err.message || 'Failed to cancel session.', 'error');
+    return;
   }
 
   const session = state.masterCalendarSessions.find(s => s.id === sessionId);
@@ -5121,7 +5232,7 @@ window.cancelSessionAdmin = async function(sessionId) {
     session.cancellationReason = reason || 'Cancelled by Clinical Administrator';
   }
 
-  showToast('Session cancelled and notifications dispatched.', 'success');
+  showToast('Session cancelled.', 'success');
   closeAppointmentModal();
   renderMasterCalendar();
 };
@@ -5130,9 +5241,11 @@ window.deleteSessionAdmin = async function(sessionId) {
   if (!confirm('Are you sure you want to remove this session record from the calendar?')) return;
 
   try {
-    await apiFetch(`/v1/admin/sessions/${sessionId}`, { method: 'DELETE' });
+    await apiRequest(`/v1/admin/sessions/${sessionId}`, { method: 'DELETE' });
   } catch (err) {
-    console.warn('API error deleting session:', err);
+    console.error('Delete session failed:', err);
+    showToast(err.message || 'Failed to delete session.', 'error');
+    return;
   }
 
   state.masterCalendarSessions = state.masterCalendarSessions.filter(s => s.id !== sessionId);
@@ -5411,17 +5524,14 @@ async function handleAddDomainSubmit(e) {
   if (btn) btn.disabled = true;
 
   try {
-    const res = await apiFetch('/admin/access-control/domains', {
-      method: 'POST',
-      body: JSON.stringify({ domain, name: name || undefined })
-    });
+    const res = await apiAction('/admin/access-control/domains', 'POST', { domain, name: name || undefined });
 
     if (res && res.success) {
       showToast(`Domain @${res.domain.domain} added successfully!`, 'success');
       closeAddDomainModal();
       await fetchAccessControlData();
     } else {
-      showToast(res?.error || 'Failed to add domain', 'error');
+      showToast(res?.error?.message || res?.error || 'Failed to add domain', 'error');
     }
   } catch (err) {
     console.error('Add domain error:', err);
@@ -5448,17 +5558,14 @@ async function handleAddBypassSubmit(e) {
   if (btn) btn.disabled = true;
 
   try {
-    const res = await apiFetch('/admin/access-control/bypass-emails', {
-      method: 'POST',
-      body: JSON.stringify({ email, note: note || undefined })
-    });
+    const res = await apiAction('/admin/access-control/bypass-emails', 'POST', { email, note: note || undefined });
 
     if (res && res.success) {
       showToast(`Bypass access granted to ${res.bypassEmail.email}!`, 'success');
       closeAddBypassModal();
       await fetchAccessControlData();
     } else {
-      showToast(res?.error || 'Failed to add bypass email', 'error');
+      showToast(res?.error?.message || res?.error || 'Failed to add bypass email', 'error');
     }
   } catch (err) {
     console.error('Add bypass email error:', err);
@@ -5642,8 +5749,12 @@ function downloadCSV(filename, headers, rows) {
 
   const escapeCSV = (val) => {
     if (val === null || val === undefined) return '""';
-    const str = String(val).replace(/"/g, '""');
-    return `"${str}"`;
+    let str = String(val);
+    // Names, messages and survey answers are user-supplied. A leading = + - @
+    // (or tab/CR) would run as a formula when the export is opened in Excel or
+    // Sheets (CSV injection), so prefix those cells with an apostrophe.
+    if (/^[=+\-@\t\r]/.test(str)) str = `'${str}`;
+    return `"${str.replace(/"/g, '""')}"`;
   };
 
   const csvContent = [
@@ -5685,7 +5796,7 @@ window.exportStudentsCSV = async function() {
   let list = state.students;
   if (!list || list.length === 0) {
     try {
-      const res = await apiFetch('/students?page=1&limit=500');
+      const res = await apiFetch('/admin/students');
       if (res && res.students) list = res.students;
     } catch (e) {
       console.warn('Failed to prefetch students for CSV:', e);
@@ -5707,29 +5818,36 @@ window.exportStudentsCSV = async function() {
   downloadCSV('wellmindly-students-registry', ['Student ID', 'Full Name', 'First Name', 'Last Name', 'Email', 'University', 'Role', 'Status', 'Registered Date', 'Assessments Count', 'Last Active'], rows);
 };
 
-// 3. Assessments CSV
+// 3. Assessments CSV (one row per submitted assessment, not per quiz blueprint)
 window.exportAssessmentsCSV = async function() {
-  let list = state.quizzes;
-  if (!list || list.length === 0) {
-    try {
-      const res = await apiFetch('/quizzes?page=1&limit=500');
-      if (res && res.quizzes) list = res.quizzes;
-    } catch (e) {
-      console.warn('Failed to prefetch quizzes for CSV:', e);
-    }
+  showToast('Fetching assessment submissions for export...', 'info');
+  const res = await apiFetch('/admin/quiz-results');
+  if (!res) {
+    showToast('Failed to load assessment submissions for export.', 'error');
+    return;
   }
-  const rows = (list || []).map(q => [
-    q.id,
-    q.student ? `${q.student.firstName || ''} ${q.student.lastName || ''}`.trim() : 'Anonymous',
-    q.student?.email || 'N/A',
-    q.quizType || q.title || 'PHQ-9 Wellbeing Screening',
-    q.score ?? 'N/A',
-    q.maxScore ?? 27,
-    q.severity || 'Normal',
-    q.isCritical ? 'CRITICAL_ALERT' : 'ROUTINE',
-    q.createdAt ? formatDateString(q.createdAt) : 'N/A'
-  ]);
-  downloadCSV('wellmindly-clinical-assessments', ['Assessment ID', 'Student Name', 'Student Email', 'Assessment Type', 'Score', 'Max Score', 'Severity Level', 'Risk Flag', 'Completed At'], rows);
+  const rows = (res.quizResults || []).map(r => {
+    let classification = r.classification || '';
+    if (classification.startsWith('{')) {
+      try {
+        classification = JSON.parse(classification).classification || '';
+      } catch {
+        // keep the raw value
+      }
+    }
+    return [
+      r.id,
+      r.user ? `${r.user.firstName || ''} ${r.user.lastName || ''}`.trim() : 'Anonymous',
+      r.user?.email || 'N/A',
+      r.quiz?.title || 'Assessment',
+      r.quiz?.category || '',
+      r.overallScore ?? 'N/A',
+      r.quiz?.maxScore ?? 'N/A',
+      classification || 'Completed',
+      r.completedAt ? formatDateString(r.completedAt) : 'N/A'
+    ];
+  });
+  downloadCSV('wellmindly-assessment-submissions', ['Submission ID', 'Student Name', 'Student Email', 'Assessment', 'Category', 'Score', 'Max Score', 'Classification', 'Completed At'], rows);
 };
 
 // 4. Counselor Applications CSV
@@ -5885,7 +6003,7 @@ window.exportFeedbackCSV = async function() {
   let list = state.feedbacks;
   if (!list || list.length === 0) {
     try {
-      const res = await apiFetch('/feedbacks?page=1&limit=200');
+      const res = await apiFetch('/admin/feedbacks');
       if (res && res.feedbacks) list = res.feedbacks;
     } catch (e) {
       console.warn('Failed to prefetch feedbacks for CSV:', e);
