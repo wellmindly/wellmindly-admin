@@ -174,6 +174,127 @@ function showToast(message, type = 'info', duration = 3500) {
   toast.addEventListener('mouseenter', () => clearTimeout(autoDismissTimer));
 }
 
+// ── IN-APP CONFIRM / PROMPT DIALOG ──────────────────────
+// Replaces the browser's native confirm()/prompt(). Resolves to true/false
+// (confirm) or to the entered text / null (when `input` is given).
+// Every text is set with textContent, so names and API strings are never parsed as HTML.
+function showAppDialog({
+  title = 'Are you sure?',
+  message = '',
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
+  danger = false,
+  icon,
+  input = null // { label, placeholder, required, multiline }
+} = {}) {
+  return new Promise((resolve) => {
+    const previouslyFocused = document.activeElement;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'modal-wrapper app-dialog';
+    wrapper.style.zIndex = '10000';
+    wrapper.setAttribute('role', 'dialog');
+    wrapper.setAttribute('aria-modal', 'true');
+    wrapper.innerHTML = `
+      <div class="modal-card width-sm" style="max-width: 440px; text-align: center;">
+        <div class="modal-body" style="padding: 28px 26px;">
+          <div class="app-dialog-icon ${danger ? 'danger' : ''}"><i class="bx"></i></div>
+          <h3 class="app-dialog-title"></h3>
+          <p class="app-dialog-message"></p>
+          <div class="app-dialog-input hidden">
+            <label class="app-dialog-label"></label>
+            <textarea rows="3"></textarea>
+            <span class="app-dialog-error hidden">This field is required.</span>
+          </div>
+          <div class="app-dialog-actions">
+            <button type="button" class="btn-secondary app-dialog-cancel"></button>
+            <button type="button" class="btn-primary app-dialog-confirm ${danger ? 'btn-danger' : ''}"></button>
+          </div>
+        </div>
+      </div>
+    `;
+    wrapper.querySelector('.app-dialog-icon i').classList.add(icon || (danger ? 'bx-error' : 'bx-help-circle'));
+    wrapper.querySelector('.app-dialog-title').textContent = title;
+    wrapper.querySelector('.app-dialog-message').textContent = message;
+    const cancelBtn = wrapper.querySelector('.app-dialog-cancel');
+    const confirmBtn = wrapper.querySelector('.app-dialog-confirm');
+    cancelBtn.textContent = cancelText;
+    confirmBtn.textContent = confirmText;
+
+    let field = null;
+    if (input) {
+      const box = wrapper.querySelector('.app-dialog-input');
+      box.classList.remove('hidden');
+      wrapper.querySelector('.app-dialog-label').textContent = input.label || '';
+      field = box.querySelector('textarea');
+      field.placeholder = input.placeholder || '';
+      if (!input.multiline) field.rows = 2;
+    }
+
+    const close = (result) => {
+      document.removeEventListener('keydown', onKey, true);
+      wrapper.remove();
+      if (previouslyFocused && typeof previouslyFocused.focus === 'function') previouslyFocused.focus();
+      resolve(result);
+    };
+    const submit = () => {
+      if (!field) return close(true);
+      const value = field.value.trim();
+      if (input.required && !value) {
+        wrapper.querySelector('.app-dialog-error').classList.remove('hidden');
+        field.focus();
+        return;
+      }
+      close(value);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); close(field ? null : false); }
+      if (e.key === 'Enter' && !(field && input.multiline && e.shiftKey)) {
+        if (e.target === cancelBtn) return;
+        e.preventDefault();
+        submit();
+      }
+    };
+
+    cancelBtn.addEventListener('click', () => close(field ? null : false));
+    confirmBtn.addEventListener('click', submit);
+    wrapper.addEventListener('click', (e) => { if (e.target === wrapper) close(field ? null : false); });
+    document.addEventListener('keydown', onKey, true);
+
+    document.body.appendChild(wrapper);
+    (field || (danger ? cancelBtn : confirmBtn)).focus();
+  });
+}
+
+function confirmDialog(options) {
+  return showAppDialog(options);
+}
+
+function promptDialog(options) {
+  return showAppDialog({ ...options, input: options.input || { label: '', required: true } });
+}
+
+// ── AVATARS ─────────────────────────────────────────────
+// Profile pictures that failed to load once (e.g. a file lost on a redeploy) are
+// remembered, so re-rendering a table shows the initials instead of requesting the
+// same missing file again.
+const failedAvatarUrls = new Set();
+
+window.handleAvatarError = function(img) {
+  failedAvatarUrls.add(img.getAttribute('src'));
+  img.style.display = 'none';
+  const fallback = img.nextElementSibling;
+  if (fallback) fallback.style.display = 'flex';
+};
+
+function avatarHtml(avatarUrl, initials, { size = 34, radius = '50%', gradient = 'linear-gradient(135deg, #0d9488, #10b981)', fontSize = 12 } = {}) {
+  const src = avatarUrl ? resolveAvatarUrl(avatarUrl) : '';
+  const showImg = Boolean(src) && !failedAvatarUrls.has(src);
+  const box = `width: ${size}px; height: ${size}px; border-radius: ${radius}; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.2);`;
+  const fallback = `<div aria-hidden="${showImg}" style="${box} display: ${showImg ? 'none' : 'flex'}; background: ${gradient}; align-items: center; justify-content: center; font-weight: 700; font-size: ${fontSize}px; color: white;">${escapeHtml(initials)}</div>`;
+  if (!showImg) return fallback;
+  return `<img src="${escapeHtml(src)}" alt="${escapeHtml(initials)}" loading="lazy" style="${box} object-fit: cover;" onerror="handleAvatarError(this)" />${fallback}`;
+}
+
 // Initialize Application
 document.addEventListener('DOMContentLoaded', () => {
   setupEventHandlers();
@@ -666,11 +787,11 @@ async function handleLogin(e) {
 }
 
 // Handle Logout
-function handleLogout() {
+async function handleLogout() {
   const modalLogout = document.getElementById('modal-logout-confirm');
   if (modalLogout) {
     modalLogout.classList.remove('hidden');
-  } else if (confirm('Are you sure you want to sign out from the Admin Portal?')) {
+  } else if (await confirmDialog({ title: 'Sign out?', message: 'Are you sure you want to sign out from the Admin Portal?', confirmText: 'Sign Out', danger: true, icon: 'bx-log-out' })) {
     state.token = null;
     localStorage.removeItem('admin_token');
     destroyAllCharts();
@@ -860,7 +981,7 @@ async function loadDashboardData() {
     apiFetch('/admin/feedbacks'),
     apiFetch('/contacts/counselor'),
     apiFetch('/contacts/university'),
-    apiFetch('/v1/admin/counselors').catch(() => null)
+    apiFetch('/v1/admin/counselors?limit=100').catch(() => null)
   ]);
 
   if (metricsData) state.metrics = metricsData;
@@ -2886,7 +3007,7 @@ function renderCounselorContacts(totalCount = state.counselorContacts.length) {
     if (cat === 'STAGE_NEW') return itemStage === 'NEW_APPLICATION';
     if (cat === 'STAGE_DOCS') return itemStage === 'DOCS_REQUESTED';
     if (cat === 'STAGE_INVITED') return itemStage === 'INVITE_SENT';
-    if (cat === 'STAGE_ONBOARDED') return itemStage === 'ONBOARDED';
+    if (cat === 'STAGE_EXPIRED') return itemStage === 'INVITE_EXPIRED';
 
     if (cat === 'PSYCH') {
       return (item.credentials || '').toLowerCase().includes('psych') || (item.credentials || '').toLowerCase().includes('phd');
@@ -2918,67 +3039,72 @@ function renderCounselorContacts(totalCount = state.counselorContacts.length) {
   displayItems.forEach(item => {
     const row = document.createElement('tr');
     const initials = (item.name || 'C').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-    const stage = item.stage || state.counselorStages?.[item.id] || 'NEW_APPLICATION';
+    const stage = item.stage || 'NEW_APPLICATION';
+    const isInvitation = item.source === 'invitation';
+    const hasInvite = isInvitation || stage === 'INVITE_SENT' || stage === 'INVITE_EXPIRED' || Boolean(item.invitationId);
+    const sentLine = item.stageUpdatedAt ? `<span style="font-size: 9.5px; color: rgba(255,255,255,0.4);">Sent: ${formatDateString(item.stageUpdatedAt)}</span>` : '';
+    const badge = (bg, color, border, icon, label) => `<span class="badge" style="font-size: 11px; background: ${bg}; color: ${color}; border: 1px solid ${border}; padding: 3px 8px; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; width: fit-content;"><i class="bx ${icon}"></i> ${label}</span>`;
+    let stageHtml;
+    if (stage === 'DOCS_REQUESTED') {
+      stageHtml = `
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            ${badge('rgba(245, 158, 11, 0.15)', '#fbbf24', 'rgba(245, 158, 11, 0.3)', 'bx-file-find', 'Docs Requested')}
+            <span style="font-size: 10px; color: #fde68a;">${escapeHtml((item.details?.requestedDocs || ['Degree Certificate', 'Identity Document', 'Practice Standing License']).join(', '))}</span>
+            ${sentLine}
+          </div>`;
+    } else if (stage === 'INVITE_SENT') {
+      stageHtml = `
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            ${badge('rgba(59, 130, 246, 0.15)', '#60a5fa', 'rgba(59, 130, 246, 0.3)', 'bx-paper-plane', 'Invite Sent')}
+            ${sentLine}
+          </div>`;
+    } else if (stage === 'INVITE_EXPIRED') {
+      stageHtml = `
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            ${badge('rgba(239, 68, 68, 0.12)', '#f87171', 'rgba(239, 68, 68, 0.3)', 'bx-time', 'Invite Expired')}
+            ${sentLine}
+          </div>`;
+    } else {
+      stageHtml = badge('rgba(139, 92, 246, 0.15)', '#c084fc', 'rgba(139, 92, 246, 0.3)', 'bx-time-five', 'New Application');
+    }
+    const conflictHtml = item.conflictRole
+      ? `<div style="font-size: 10px; color: #f87171; margin-top: 4px;">Email already used by a ${escapeHtml(String(item.conflictRole).toLowerCase())} account</div>`
+      : '';
 
     row.innerHTML = `
       <td>
         <div style="display: flex; align-items: center; gap: 10px;">
-          <div style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, hsl(var(--primary-plum)), #3b82f6); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: white; border: 1px solid rgba(255,255,255,0.2);">
-            ${escapeHtml(initials)}
-          </div>
+          ${avatarHtml(null, initials, { gradient: 'linear-gradient(135deg, hsl(var(--primary-plum)), #3b82f6)' })}
           <div>
             <strong style="color: white; font-size: 13px;">${escapeHtml(item.name)}</strong>
-            <div style="font-size: 11px; color: rgba(255,255,255,0.4);">${escapeHtml(item.phone || 'Phone pending')}</div>
+            <div style="font-size: 11px; color: rgba(255,255,255,0.4);">${isInvitation ? 'Direct invitation' : escapeHtml(item.phone || 'Phone pending')}</div>
           </div>
         </div>
       </td>
-      <td><span class="text-secondary" style="font-size: 12px;">${escapeHtml(item.email)}</span></td>
+      <td><span class="text-secondary" style="font-size: 12px;">${escapeHtml(item.email)}</span>${conflictHtml}</td>
       <td><span class="text-secondary" style="font-size: 12px;">${escapeHtml(item.phone || 'N/A')}</span></td>
       <td>
         <span class="badge-credentials" style="font-size: 11px; background: rgba(122, 91, 147, 0.2); color: #c084fc; border: 1px solid rgba(122, 91, 147, 0.4); padding: 3px 8px; border-radius: 4px;">
-          ${escapeHtml(item.credentials || 'General Coaching')}
+          ${escapeHtml(item.credentials || (isInvitation ? 'Pending profile setup' : 'General Coaching'))}
         </span>
       </td>
-      <td>
-        ${stage === 'DOCS_REQUESTED' ? `
-          <div style="display: flex; flex-direction: column; gap: 4px;">
-            <span class="badge" style="font-size: 11px; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); padding: 3px 8px; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; width: fit-content;">
-              <i class="bx bx-file-find"></i> Docs Requested
-            </span>
-            <span style="font-size: 10px; color: #fde68a;">
-              ${(item.details?.requestedDocs || ['Degree Certificate', 'Identity Document', 'Practice Standing License']).join(', ')}
-            </span>
-            ${item.stageUpdatedAt ? `<span style="font-size: 9.5px; color: rgba(255,255,255,0.4);">Sent: ${formatDateString(item.stageUpdatedAt)}</span>` : ''}
-          </div>
-        ` : stage === 'INVITE_SENT' ? `
-          <div style="display: flex; flex-direction: column; gap: 4px;">
-            <span class="badge" style="font-size: 11px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 3px 8px; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; width: fit-content;">
-              <i class="bx bx-paper-plane"></i> Invite Sent
-            </span>
-            ${item.stageUpdatedAt ? `<span style="font-size: 9.5px; color: rgba(255,255,255,0.4);">Sent: ${formatDateString(item.stageUpdatedAt)}</span>` : ''}
-          </div>
-        ` : stage === 'ONBOARDED' ? `
-          <span class="badge" style="font-size: 11px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 3px 8px; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
-            <i class="bx bx-check-shield"></i> Active Counselor
-          </span>
-        ` : `
-          <span class="badge" style="font-size: 11px; background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); padding: 3px 8px; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
-            <i class="bx bx-time-five"></i> New Application
-          </span>
-        `}
-      </td>
+      <td>${stageHtml}</td>
       <td><span style="font-size: 12px; color: rgba(255,255,255,0.5);">${formatDateString(item.createdAt)}</span></td>
       <td class="text-right">
         <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
-          <button class="btn-view-details" onclick="openInquiryDetails('counselor', '${item.id}')" title="View Application Details">
+          <button class="btn-view-details" onclick="openInquiryDetails('counselor', '${escapeHtml(item.id)}')" title="View details">
             <i class="bx bx-show"></i> Details
           </button>
-          <button class="btn-view-details" onclick="approveCounselorApplication('${item.id}')" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.5); color: #34d399;" title="Approve & Send Invitation Setup Email">
-            <i class="bx bx-send"></i> Invite
+          <button class="btn-view-details" onclick="approveCounselorApplication('${escapeHtml(item.id)}')" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.5); color: #34d399;" title="${hasInvite ? 'Send a fresh setup link' : 'Approve & send invitation setup email'}">
+            <i class="bx bx-send"></i> ${hasInvite ? 'Resend Invite' : 'Invite'}
           </button>
-          <button class="btn-view-details" onclick="deleteInquiry('counselor', '${item.id}')" style="background: rgba(220, 38, 38, 0.2); border-color: rgba(220, 38, 38, 0.4); color: #ef4444;" title="Delete Application">
+          ${isInvitation ? `
+          <button class="btn-view-details" onclick="revokeCounselorInvitation('${escapeHtml(item.id)}')" style="background: rgba(220, 38, 38, 0.2); border-color: rgba(220, 38, 38, 0.4); color: #ef4444;" title="Revoke invitation">
+            <i class="bx bx-user-x"></i>
+          </button>` : `
+          <button class="btn-view-details" onclick="deleteInquiry('counselor', '${escapeHtml(item.id)}')" style="background: rgba(220, 38, 38, 0.2); border-color: rgba(220, 38, 38, 0.4); color: #ef4444;" title="Delete application">
             <i class="bx bx-trash"></i>
-          </button>
+          </button>`}
         </div>
       </td>
     `;
@@ -3110,7 +3236,13 @@ function updateSelectedSubscribersBar() {
 window.deleteSelectedSubscribers = async function() {
   const ids = Array.from(window.selectedSubscribers);
   if (ids.length === 0) return;
-  if (!confirm(`Permanently delete ${ids.length} selected subscriber${ids.length > 1 ? 's' : ''}? This cannot be undone.`)) return;
+  if (!(await confirmDialog({
+    title: 'Delete subscribers?',
+    message: `Permanently delete ${ids.length} selected subscriber${ids.length > 1 ? 's' : ''}? This cannot be undone.`,
+    confirmText: 'Delete',
+    danger: true,
+    icon: 'bx-trash'
+  }))) return;
 
   try {
     showToast('Deleting selected subscribers...', 'info');
@@ -3129,7 +3261,12 @@ window.deleteSelectedSubscribers = async function() {
 };
 
 window.purgeNewsletterBots = async function() {
-  if (!confirm('This will classify all waitlist/newsletter entries, archive fake/bot submissions into quarantine, and preserve all real subscribers. Proceed?')) {
+  if (!(await confirmDialog({
+    title: 'Archive bot submissions?',
+    message: 'This will classify all waitlist/newsletter entries, archive fake/bot submissions into quarantine, and preserve all real subscribers.',
+    confirmText: 'Proceed',
+    icon: 'bx-shield-quarter'
+  }))) {
     return;
   }
   try {
@@ -3440,9 +3577,14 @@ function openInquiryDetails(type, id) {
       { label: 'Applicant Full Name', value: item?.name },
       { label: 'Email Address', value: item?.email },
       { label: 'Phone Number', value: item?.phone || 'Not provided' },
-      { label: 'Vetted Credentials & Licenses', value: item?.credentials },
-      { label: 'Professional Experience Summary', value: item?.experience, isTextarea: true },
-      { label: 'Cover Note / Message', value: item?.message, isTextarea: true },
+      ...(item?.source === 'invitation' ? [
+        { label: 'Source', value: 'Direct admin invitation (no application form)' },
+        { label: 'Invitation Expires', value: item?.details?.expiresAt ? formatDateString(item.details.expiresAt) : 'N/A' }
+      ] : [
+        { label: 'Vetted Credentials & Licenses', value: item?.credentials },
+        { label: 'Professional Experience Summary', value: item?.experience, isTextarea: true },
+        { label: 'Cover Note / Message', value: item?.message, isTextarea: true }
+      ]),
       { label: 'Received At', value: formatDateString(item?.createdAt) + ' ' + new Date(item?.createdAt).toLocaleTimeString() }
     ];
   } else if (type === 'general') {
@@ -3511,7 +3653,7 @@ function openInquiryDetails(type, id) {
       NEW_APPLICATION: '#c084fc',
       DOCS_REQUESTED: '#fbbf24',
       INVITE_SENT: '#60a5fa',
-      ONBOARDED: '#34d399'
+      INVITE_EXPIRED: '#f87171'
     };
 
     stageBox.innerHTML = `
@@ -3522,18 +3664,13 @@ function openInquiryDetails(type, id) {
           </span>
           ${item.stageUpdatedAt ? `<span style="font-size: 10.5px; color: rgba(255,255,255,0.4);">Updated: ${formatDateString(item.stageUpdatedAt)}</span>` : ''}
         </div>
-        <select onchange="updateCounselorStage('${item.id}', this.value)" class="form-select" style="padding: 6px 12px; font-size: 12px; width: auto;">
-          <option value="NEW_APPLICATION" ${currentStage === 'NEW_APPLICATION' ? 'selected' : ''}>🟣 New Application</option>
-          <option value="DOCS_REQUESTED" ${currentStage === 'DOCS_REQUESTED' ? 'selected' : ''}>🟡 Docs Requested</option>
-          <option value="INVITE_SENT" ${currentStage === 'INVITE_SENT' ? 'selected' : ''}>🔵 Invite Sent</option>
-          <option value="ONBOARDED" ${currentStage === 'ONBOARDED' ? 'selected' : ''}>🟢 Active Counselor</option>
-        </select>
+        <span style="font-size: 12px; font-weight: 700; color: ${stageColors[currentStage] || '#c084fc'};" title="Updated automatically from invitations and account activation">${escapeHtml(item.stageLabel || currentStage)}</span>
       </div>
       <div style="display: flex; gap: 8px; align-items: center; padding-top: 4px;">
-        <div style="flex: 1; height: 4px; border-radius: 2px; background: ${['NEW_APPLICATION', 'DOCS_REQUESTED', 'INVITE_SENT', 'ONBOARDED'].includes(currentStage) ? '#c084fc' : 'rgba(255,255,255,0.1)'};" title="Step 1: Application Received"></div>
-        <div style="flex: 1; height: 4px; border-radius: 2px; background: ${['DOCS_REQUESTED', 'INVITE_SENT', 'ONBOARDED'].includes(currentStage) ? '#fbbf24' : 'rgba(255,255,255,0.1)'};" title="Step 2: Verification Docs Requested"></div>
-        <div style="flex: 1; height: 4px; border-radius: 2px; background: ${['INVITE_SENT', 'ONBOARDED'].includes(currentStage) ? '#60a5fa' : 'rgba(255,255,255,0.1)'};" title="Step 3: Portal Registration Invite Sent"></div>
-        <div style="flex: 1; height: 4px; border-radius: 2px; background: ${currentStage === 'ONBOARDED' ? '#34d399' : 'rgba(255,255,255,0.1)'};" title="Step 4: Active Registered Counselor"></div>
+        <div style="flex: 1; height: 4px; border-radius: 2px; background: ${['NEW_APPLICATION', 'DOCS_REQUESTED', 'INVITE_SENT', 'INVITE_EXPIRED'].includes(currentStage) ? '#c084fc' : 'rgba(255,255,255,0.1)'};" title="Step 1: Application Received"></div>
+        <div style="flex: 1; height: 4px; border-radius: 2px; background: ${['DOCS_REQUESTED', 'INVITE_SENT', 'INVITE_EXPIRED'].includes(currentStage) ? '#fbbf24' : 'rgba(255,255,255,0.1)'};" title="Step 2: Verification Docs Requested"></div>
+        <div style="flex: 1; height: 4px; border-radius: 2px; background: ${['INVITE_SENT', 'INVITE_EXPIRED'].includes(currentStage) ? '#60a5fa' : 'rgba(255,255,255,0.1)'};" title="Step 3: Portal Registration Invite Sent"></div>
+        <div style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.1);" title="Step 4: Counselor activates their account (then moves to the Counselor Directory)"></div>
       </div>
       ${currentStage === 'DOCS_REQUESTED' ? `
         <div style="margin-top: 12px; padding: 10px 12px; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 8px;">
@@ -3645,8 +3782,12 @@ function openInquiryDetails(type, id) {
       <button class="btn-secondary" onclick="requestCounselorDocs('${item.id}')" style="background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.4); color: #818cf8; padding: 8px 14px; display: flex; align-items: center; gap: 6px;">
         <i class="bx bx-file-find"></i> Request Certificates & Docs
       </button>
+      ${item.source === 'invitation' ? `
+      <button class="btn-secondary" onclick="revokeCounselorInvitation('${item.id}')" style="background: rgba(220, 38, 38, 0.15); border-color: rgba(220, 38, 38, 0.4); color: #ef4444; padding: 8px 14px; display: flex; align-items: center; gap: 6px;">
+        <i class="bx bx-user-x"></i> Revoke Invite
+      </button>` : ''}
       <button class="btn-primary" onclick="approveCounselorApplication('${item.id}')" style="background: #10b981; border: none; padding: 8px 14px; display: flex; align-items: center; gap: 6px;">
-        <i class="bx bx-check-shield"></i> Approve & Onboard Counselor
+        <i class="bx ${(item.source === 'invitation' || item.invitationId) ? 'bx-send' : 'bx-check-shield'}"></i> ${(item.source === 'invitation' || item.invitationId) ? 'Resend Invitation' : 'Approve & Onboard Counselor'}
       </button>
     `;
     container.appendChild(actionsBox);
@@ -3913,7 +4054,13 @@ function closeInquiryModal() {
 }
 
 async function deleteInquiry(type, id) {
-  if (!confirm(`Are you sure you want to permanently delete this ${type} inquiry record?`)) return;
+  if (!(await confirmDialog({
+    title: 'Delete record?',
+    message: `Permanently delete this ${type} inquiry record? This cannot be undone.`,
+    confirmText: 'Delete',
+    danger: true,
+    icon: 'bx-trash'
+  }))) return;
 
   try {
     const response = await fetch(`${BASE_URL}/contacts/${type}/${id}`, {
@@ -3966,12 +4113,16 @@ function formatDateString(dateStr) {
 async function fetchTalkModerationData() {
   const [rooms, modData, talkMetrics] = await Promise.all([
     apiFetch('/talk/rooms'),
-    apiFetch('/talk/moderation'),
+    // The flagged queue lives at /admin/talk/flagged; /talk/moderation never existed (404).
+    apiFetch('/admin/talk/flagged'),
     apiFetch('/admin/talk/metrics')
   ]);
 
   state.talkRooms = rooms || [];
-  state.flaggedData = modData || { notes: [], replies: [] };
+  state.flaggedData = {
+    notes: modData?.flaggedNotes || modData?.notes || [],
+    replies: modData?.flaggedReplies || modData?.replies || []
+  };
   state.talkMetrics = talkMetrics || null;
 
   renderAdminRoomsList(state.talkRooms);
@@ -4201,7 +4352,7 @@ function renderFlaggedQueue() {
 // Moderation Action: Approve / Reject Content
 window.resolveModeration = async function(type, itemId, action, contentExcerpt = '') {
   try {
-    const res = await apiPost(`/talk/moderation/${type}/${itemId}/resolve`, { action });
+    const res = await apiPost(`/admin/talk/flagged/${type}/${itemId}/resolve`, { action: String(action).toUpperCase() });
     if (res && res.success) {
       // Append to local audit history log
       const auditEntry = {
@@ -4229,7 +4380,7 @@ window.resolveModeration = async function(type, itemId, action, contentExcerpt =
 };
 
 // Moderation Escalation: Counselor Referral or Crisis Emergency Protocol
-window.escalateModeration = function(type, itemId, level, contentExcerpt = '', authorNick = '') {
+window.escalateModeration = async function(type, itemId, level, contentExcerpt = '', authorNick = '') {
   if (level === 'counselor') {
     const auditEntry = {
       id: 'aud_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
@@ -4248,7 +4399,13 @@ window.escalateModeration = function(type, itemId, level, contentExcerpt = '', a
     // log. Say so, rather than implying the clinical team was alerted.
     showToast(`Marked for counselor follow-up (saved in this browser only). No one has been notified automatically: contact the counselor team directly about "${authorNick}".`, 'warning', 8000);
   } else if (level === 'crisis') {
-    const isConfirmed = confirm(`🚨 CRISIS ESCALATION for peer "${authorNick}"\n\nThis records the escalation in this browser's moderation log only. It does NOT alert anyone or dispatch emergency resources.\n\nAfter confirming, follow the crisis escalation procedure in the Policy Guide and contact the on-call counselor / emergency services yourself.`);
+    const isConfirmed = await confirmDialog({
+      title: `Crisis escalation for "${authorNick}"`,
+      message: 'This records the escalation in this browser\'s moderation log only. It does NOT alert anyone or dispatch emergency resources.\n\nAfter confirming, follow the crisis escalation procedure in the Policy Guide and contact the on-call counselor / emergency services yourself.',
+      confirmText: 'Record Escalation',
+      danger: true,
+      icon: 'bx-error-alt'
+    });
     if (!isConfirmed) return;
 
     const auditEntry = {
@@ -4304,8 +4461,8 @@ function renderModerationAuditLog() {
 }
 
 // Clear Session Audit Log
-window.clearLocalAuditLog = function() {
-  if (confirm('Clear local moderation audit history for this session?')) {
+window.clearLocalAuditLog = async function() {
+  if (await confirmDialog({ title: 'Clear audit history?', message: 'Clear local moderation audit history for this session?', confirmText: 'Clear', danger: true, icon: 'bx-eraser' })) {
     state.moderationAuditLog = [];
     localStorage.removeItem('wellmindly_moderation_audit_log');
     renderModerationAuditLog();
@@ -4346,7 +4503,7 @@ async function createTalkRoom() {
 
 // Delete a TalkRoom
 window.deleteTalkRoom = async function(roomId) {
-  if (confirm('Are you sure you want to permanently delete this TalkRoom? All associated messages will be removed.')) {
+  if (await confirmDialog({ title: 'Delete TalkRoom?', message: 'Permanently delete this TalkRoom? All associated messages will be removed.', confirmText: 'Delete Room', danger: true, icon: 'bx-trash' })) {
     try {
       const res = await apiAction(`/talk/rooms/${roomId}`, 'DELETE');
       if (res && res.success) {
@@ -4377,7 +4534,7 @@ async function fetchAdminCounselors() {
   const tableBody = document.getElementById('counselors-table-body');
   if (!tableBody) return;
 
-  const res = await apiGet('/v1/admin/counselors');
+  const res = await apiGet('/v1/admin/counselors?limit=100');
   if (!res || !res.success) return;
 
   const counselors = res.data || [];
@@ -4400,16 +4557,7 @@ async function fetchAdminCounselors() {
       <tr>
         <td>
           <div style="display: flex; align-items: center; gap: 10px;">
-            ${c.avatarUrl ? `
-              <img src="${escapeHtml(resolveAvatarUrl(c.avatarUrl))}" alt="${escapeHtml(initials)}" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-              <div style="display: none; width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, hsl(var(--primary-teal)), #10b981); align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: white; border: 1px solid rgba(255,255,255,0.2);">
-                ${escapeHtml(initials)}
-              </div>
-            ` : `
-              <div style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, hsl(var(--primary-teal)), #10b981); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: white; border: 1px solid rgba(255,255,255,0.2);">
-                ${escapeHtml(initials)}
-              </div>
-            `}
+            ${avatarHtml(c.avatarUrl, initials)}
             <div>
               <div style="font-weight: 700; font-size: 13.5px; color: white;">${escapeHtml(c.user?.firstName)} ${escapeHtml(c.user?.lastName)}</div>
               <div style="font-size: 11px; color: hsl(var(--text-secondary)); margin-top: 1px;">${escapeHtml(c.user?.email)}</div>
@@ -4444,7 +4592,13 @@ window.toggleCounselorStatus = async function(id, newStatus) {
   const question = newStatus === 'ACTIVE'
     ? `${counselor?.status === 'UNDER_REVIEW' ? 'Approve' : 'Activate'} ${name}? They will become visible and bookable by students. Make sure their credentials have been verified.`
     : `Suspend ${name}? They will no longer be bookable by students.`;
-  if (!confirm(question)) return;
+  if (!(await confirmDialog({
+    title: newStatus === 'ACTIVE' ? `${counselor?.status === 'UNDER_REVIEW' ? 'Approve' : 'Activate'} counselor?` : 'Suspend counselor?',
+    message: question,
+    confirmText: newStatus === 'ACTIVE' ? (counselor?.status === 'UNDER_REVIEW' ? 'Approve' : 'Activate') : 'Suspend',
+    danger: newStatus !== 'ACTIVE',
+    icon: newStatus === 'ACTIVE' ? 'bx-check-shield' : 'bx-block'
+  }))) return;
 
   try {
     const res = await apiRequest(`/v1/admin/counselors/${id}/status`, {
@@ -4483,18 +4637,10 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast('Sending counselor invitation email...', 'info');
       const res = await apiAction('/v1/admin/counselors/invite', 'POST', { firstName, lastName, email });
       if (res && res.success) {
-        let setupUrl = res.data?.setupUrl || '';
-        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && setupUrl.includes('localhost')) {
-          setupUrl = setupUrl.replace(/^https?:\/\/localhost(:\d+)?/, 'https://counselor.wellmindly.com');
-        }
-        showCustomAlert(
-          'Counselor Invitation Sent!',
-          `Invitation created for ${firstName} ${lastName} (${email}). An email has been sent (BCC: wellmindly@gmail.com).\n\nSetup Registration Link (Copy to share directly):`,
-          setupUrl
-        );
+        showInviteResult("Counselor Invitation Sent", `Invitation created for ${firstName} ${lastName} (${email}).`, res.data);
         inviteForm.reset();
-        if (inviteCard) inviteCard.classList.add('hidden');
-        fetchAdminCounselors();
+        if (inviteCard) inviteCard.classList.add("hidden");
+        refreshCounselorLists();
       } else {
         showToast(res?.error?.message || 'Failed to send invitation', 'error');
       }
@@ -4579,61 +4725,138 @@ function closeCustomAlertModal() {
   if (modal) modal.classList.add('hidden');
 }
 
+// Counselor Applications rows come from two sources (see backend
+// services/counselorPipeline.ts): public onboarding applications
+// (source 'application', actions under /contacts/counselor/:id) and direct
+// admin invitations (source 'invitation', actions under
+// /v1/admin/counselors/invitations/:id). Both stay here until the counselor
+// activates their account, then they appear only in the Counselor Directory.
+function findCounselorPipelineItem(id) {
+  return (state.counselorContacts || []).find(c => c.id === id);
+}
+
+function refreshCounselorLists() {
+  fetchCounselorContacts();
+  fetchAdminCounselors();
+}
+
+function reopenCounselorDetails(id) {
+  const modal = document.getElementById('modal-inquiry');
+  if (modal && !modal.classList.contains('hidden') && findCounselorPipelineItem(id)) {
+    openInquiryDetails('counselor', id);
+  }
+}
+
 window.requestCounselorDocs = async function(id) {
-  const item = state.counselorContacts.find(c => c.id === id);
+  const item = findCounselorPipelineItem(id);
+  const isInvitation = item?.source === 'invitation';
   showToast('Sending document request email...', 'info');
-  const res = await apiAction(`/contacts/counselor/${id}/request-docs`, 'POST', {});
+  const res = isInvitation
+    ? await apiAction(`/v1/admin/counselors/invitations/${id}/request-docs`, 'POST', {})
+    : await apiAction(`/contacts/counselor/${id}/request-docs`, 'POST', {});
   if (res && res.success) {
-    state.counselorStages[id] = 'DOCS_REQUESTED';
-    localStorage.setItem('wellmindly_counselor_stages', JSON.stringify(state.counselorStages));
+    const data = res.data || res;
     if (item) {
       item.stage = 'DOCS_REQUESTED';
       item.stageUpdatedAt = new Date().toISOString();
-      if (!item.details) item.details = {};
-      item.details.requestedDocs = ['Degree Certificate', 'Identity Document', 'Practice Standing License'];
+      item.details = { ...(item.details || {}), requestedDocs: ['Degree Certificate', 'Identity Document', 'Practice Standing License'] };
     }
     renderCounselorContacts();
-    showToast(res.message || `Document request email sent to ${item?.email || 'applicant'}`, 'success');
-    const modal = document.getElementById('modal-inquiry');
-    if (modal && !modal.classList.contains('hidden')) {
-      openInquiryDetails('counselor', id);
-    }
+    showToast(data.message || `Document request email sent to ${item?.email || 'applicant'}`, data.emailDelivered === false ? 'warning' : 'success', data.emailDelivered === false ? 7000 : 3500);
+    reopenCounselorDetails(id);
+    fetchCounselorContacts();
   } else {
     showToast(res?.error?.message || 'Failed to send document request email', 'error');
   }
 };
 
+function showInviteResult(title, intro, data) {
+  let setupUrl = data?.setupUrl || '';
+  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && setupUrl.includes('localhost')) {
+    setupUrl = setupUrl.replace(/^https?:\/\/localhost(:\d+)?/, 'https://counselor.wellmindly.com');
+  }
+  const delivery = data?.emailDelivered === false
+    ? 'The email could NOT be sent. Copy the setup link below and share it with them directly.'
+    : 'An email with the setup link has been sent. You can also copy the link below.';
+  showCustomAlert(title, `${intro}\n\n${delivery}\n\nThey stay under Counselor Applications until they activate their account, then move to the Counselor Directory automatically.`, setupUrl || null);
+}
+
 window.approveCounselorApplication = async function(id) {
-  const item = state.counselorContacts.find(c => c.id === id);
-  // Approving creates a counselor account and emails a registration link, so
-  // it must not fire from a single stray click in the applications table.
-  if (!confirm(`Approve ${item?.name || 'this applicant'}${item?.email ? ` (${item.email})` : ''} and email them a counselor registration link?`)) return;
+  const item = findCounselorPipelineItem(id);
+  if (item?.source === 'invitation') return window.resendCounselorInvite(id);
+
+  const who = `${item?.name || 'this applicant'}${item?.email ? ` (${item.email})` : ''}`;
+  const isResend = item?.stage === 'INVITE_SENT' || item?.stage === 'INVITE_EXPIRED';
+  // Approving creates an invitation and emails a registration link, so it must
+  // not fire from a single stray click in the applications table.
+  const ok = await confirmDialog({
+    title: isResend ? 'Resend invitation?' : 'Approve applicant?',
+    message: isResend
+      ? `Send ${who} a fresh counselor registration link? The previous link stops working.`
+      : `Approve ${who} and email them a counselor registration link?`,
+    confirmText: isResend ? 'Resend Invite' : 'Approve & Invite',
+    icon: 'bx-send'
+  });
+  if (!ok) return;
+
   showToast('Approving counselor application...', 'info');
   const res = await apiAction(`/contacts/counselor/${id}/approve-onboard`, 'POST', {});
   if (res && res.success) {
-    state.counselorStages[id] = 'INVITE_SENT';
-    localStorage.setItem('wellmindly_counselor_stages', JSON.stringify(state.counselorStages));
-    if (item) {
-      item.stage = 'INVITE_SENT';
-      item.stageUpdatedAt = new Date().toISOString();
-    }
-    renderCounselorContacts();
     closeInquiryModal();
     if (res.setupUrl) {
-      showCustomAlert(
-        'Counselor Application Approved!',
-        `Application for ${item?.name || 'Counselor'} (${item?.email}) has been approved.\n\nAn onboarding registration link has been emailed to the applicant (BCC: wellmindly@gmail.com). You can also copy the link below:`,
-        res.setupUrl
-      );
+      showInviteResult('Counselor Application Approved', `Application for ${item?.name || 'the counselor'} (${item?.email || ''}) has been approved.`, res);
     } else {
-      showToast(res.message || 'Counselor approved and account activated!', 'success');
+      showToast(res.message || 'Counselor approved and account activated!', 'success', 6000);
     }
-    fetchCounselorContacts();
-    fetchAdminCounselors();
+    refreshCounselorLists();
   } else {
-    showToast(res?.error?.message || 'Failed to approve counselor application', 'error');
+    showToast(res?.error?.message || 'Failed to approve counselor application', 'error', 6000);
   }
 };
+
+window.resendCounselorInvite = async function(id) {
+  const item = findCounselorPipelineItem(id);
+  const ok = await confirmDialog({
+    title: 'Resend invitation?',
+    message: `Send ${item?.name || 'this counselor'}${item?.email ? ` (${item.email})` : ''} a fresh registration link? The previous link stops working.`,
+    confirmText: 'Resend Invite',
+    icon: 'bx-send'
+  });
+  if (!ok) return;
+
+  showToast('Resending invitation...', 'info');
+  const res = await apiAction(`/v1/admin/counselors/invitations/${id}/resend`, 'POST', {});
+  if (res && res.success) {
+    closeInquiryModal();
+    showInviteResult('Invitation Re-sent', `A new registration link was issued for ${item?.name || 'the counselor'} (${item?.email || ''}).`, res.data);
+    refreshCounselorLists();
+  } else {
+    showToast(res?.error?.message || 'Failed to resend invitation', 'error', 6000);
+    refreshCounselorLists();
+  }
+};
+
+window.revokeCounselorInvitation = async function(id) {
+  const item = findCounselorPipelineItem(id);
+  const ok = await confirmDialog({
+    title: 'Revoke invitation?',
+    message: `Revoke the invitation for ${item?.name || 'this counselor'}${item?.email ? ` (${item.email})` : ''}? Their setup link stops working immediately.`,
+    confirmText: 'Revoke',
+    danger: true,
+    icon: 'bx-user-x'
+  });
+  if (!ok) return;
+
+  const res = await apiAction(`/v1/admin/counselors/invitations/${id}`, 'DELETE');
+  if (res && res.success) {
+    closeInquiryModal();
+    showToast(res.data?.message || 'Invitation revoked.', 'success');
+    fetchCounselorContacts();
+  } else {
+    showToast(res?.error?.message || 'Failed to revoke invitation', 'error');
+  }
+};
+
 
 function compressImage(file, maxDimension = 800, quality = 0.85) {
   return new Promise((resolve, reject) => {
@@ -4745,7 +4968,7 @@ async function fetchAdminMasterCalendar() {
 
   // Always refresh counselors so status (e.g. SUSPENDED) is 100% accurate
   try {
-    const counsRes = await apiFetch('/v1/admin/counselors');
+    const counsRes = await apiFetch('/v1/admin/counselors?limit=100');
     if (counsRes && counsRes.data) {
       state.counselors = counsRes.data;
     }
@@ -4860,16 +5083,7 @@ function renderCounselorAvailabilitySlots() {
       <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 14px; border-radius: 10px;">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
           <div style="display: flex; align-items: center; gap: 10px;">
-            ${c.avatarUrl ? `
-              <img src="${escapeHtml(resolveAvatarUrl(c.avatarUrl))}" alt="${escapeHtml(initials)}" style="width: 32px; height: 32px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-              <div style="display: none; width: 32px; height: 32px; border-radius: 8px; background: ${c.color}; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; color: white;">
-                ${escapeHtml(initials)}
-              </div>
-            ` : `
-              <div style="width: 32px; height: 32px; border-radius: 8px; background: ${c.color}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; color: white;">
-                ${escapeHtml(initials)}
-              </div>
-            `}
+            ${avatarHtml(c.avatarUrl, initials, { size: 32, radius: "8px", gradient: c.color, fontSize: 11 })}
             <div>
               <strong style="color: white; font-size: 12.5px; display: block;">${escapeHtml(c.name)}</strong>
               <span style="font-size: 10.5px; color: rgba(255,255,255,0.4);">${escapeHtml(c.special)}</span>
@@ -5210,8 +5424,16 @@ async function handleRescheduleSessionSubmit(e) {
 }
 
 window.cancelSessionAdmin = async function(sessionId) {
-  const reason = prompt('Please enter cancellation reason for student & counselor notification:');
-  if (reason === null) return; // Cancelled prompt
+  const reason = await promptDialog({
+    title: 'Cancel session?',
+    message: 'The student and counselor will be notified of the cancellation.',
+    confirmText: 'Cancel Session',
+    cancelText: 'Keep Session',
+    danger: true,
+    icon: 'bx-calendar-x',
+    input: { label: 'Cancellation reason', placeholder: 'e.g. Counselor unavailable due to an emergency', required: false, multiline: true }
+  });
+  if (reason === null) return; // Dialog dismissed
 
   try {
     await apiRequest(`/v1/admin/sessions/${sessionId}/cancel`, {
@@ -5238,7 +5460,7 @@ window.cancelSessionAdmin = async function(sessionId) {
 };
 
 window.deleteSessionAdmin = async function(sessionId) {
-  if (!confirm('Are you sure you want to remove this session record from the calendar?')) return;
+  if (!(await confirmDialog({ title: 'Remove session?', message: 'Remove this session record from the calendar?', confirmText: 'Remove', danger: true, icon: 'bx-trash' }))) return;
 
   try {
     await apiRequest(`/v1/admin/sessions/${sessionId}`, { method: 'DELETE' });
@@ -5884,7 +6106,7 @@ window.exportCounselorsCSV = async function() {
   let list = state.counselors;
   if (!list || list.length === 0) {
     try {
-      const res = await apiFetch('/v1/admin/counselors');
+      const res = await apiFetch('/v1/admin/counselors?limit=100');
       if (res && res.data) list = res.data;
     } catch (e) {
       console.warn('Failed to prefetch counselors for CSV:', e);
