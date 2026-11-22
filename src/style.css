@@ -2833,3 +2833,79 @@ body {
 .data-table tr:hover {
   background: rgba(255, 255, 255, 0.02) !important;
 }
+
+/* In-app confirm / prompt dialog (replaces native confirm/prompt) */
+.app-dialog-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  margin: 0 auto 14px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  background: rgba(99, 102, 241, 0.14);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #818cf8;
+}
+.app-dialog-icon.danger {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+}
+.app-dialog-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 8px;
+}
+.app-dialog-message {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.55;
+  margin-bottom: 20px;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.app-dialog-input {
+  text-align: left;
+  margin-bottom: 18px;
+}
+.app-dialog-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 6px;
+}
+.app-dialog-input textarea {
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+  font-size: 13px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.6);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-sizing: border-box;
+}
+.app-dialog-error {
+  display: block;
+  font-size: 11px;
+  color: #f87171;
+  margin-top: 4px;
+}
+.app-dialog-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+.app-dialog-actions > button {
+  flex: 1;
+  justify-content: center;
+}
+.btn-primary.btn-danger {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  border-color: rgba(239, 68, 68, 0.4);
+}
